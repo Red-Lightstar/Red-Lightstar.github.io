@@ -153,8 +153,20 @@
             isRunning = false;
             clearInterval(gameInterval);
             startBtn.disabled = false;
-            startBtn.textContent = '重新开始';
-            alert(`游戏结束！最终得分: ${score}`);
+            startBtn.textContent = '开始游戏';
+            
+            // 显示结束画面
+            drawGrid();
+            ctx.fillStyle = '#f87171';
+            ctx.font = '32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2 - 20);
+            ctx.fillStyle = '#4ade80';
+            ctx.font = '24px Arial';
+            ctx.fillText(`最终得分: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+            ctx.fillStyle = '#888';
+            ctx.font = '18px Arial';
+            ctx.fillText('点击"开始游戏"重新开始', canvas.width / 2, canvas.height / 2 + 60);
         }
 
         function loseLife() {
