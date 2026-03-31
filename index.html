@@ -20,6 +20,8 @@
         canvas {
             border: 2px solid #4a4a6a;
             background: #0f0f23;
+            display: block;
+            margin: 0 auto;
         }
         #score {
             color: #fff;
@@ -31,12 +33,34 @@
             margin-top: 10px;
             font-size: 14px;
         }
+        #startBtn {
+            background: #4ade80;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        #startBtn:hover {
+            background: #22c55e;
+        }
+        #gameOver {
+            color: #f87171;
+            font-size: 18px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="game">
         <div id="score">得分: 0</div>
         <canvas id="canvas" width="400" height="400"></canvas>
+        <div id="gameOver">游戏结束！</div>
+        <button id="startBtn">开始游戏</button>
         <div id="controls">使用方向键控制</div>
     </div>
 
@@ -44,15 +68,33 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const scoreEl = document.getElementById('score');
+        const startBtn = document.getElementById('startBtn');
+        const gameOverEl = document.getElementById('gameOver');
         
         const gridSize = 20;
         const tileCount = canvas.width / gridSize;
         
-        let snake = [{x: 10, y: 10}];
-        let food = {x: 15, y: 15};
+        let snake = [];
+        let food = {};
         let dx = 0, dy = 0;
         let score = 0;
-        let gameOver = false;
+        let gameRunning = false;
+        let gameLoop = null;
+        
+        function initGame() {
+            // 蛇从中央开始
+            snake = [
+                {x: 10, y: 10},
+                {x: 9, y: 10},
+                {x: 8, y: 10}
+            ];
+            dx = 1; // 初始向右移动
+            dy = 0;
+            score = 0;
+            scoreEl.textContent = '得分: 0';
+            gameOverEl.style.display = 'none';
+            placeFood();
+        }
         
         function drawGame() {
             // 清空画布
@@ -60,13 +102,14 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // 画蛇
-            ctx.fillStyle = '#4ade80';
             snake.forEach((segment, index) => {
+                if (index === 0) {
+                    ctx.fillStyle = '#22c55e'; // 蛇头
+                } else {
+                    ctx.fillStyle = '#4ade80'; // 蛇身
+                }
                 ctx.fillRect(segment.x * gridSize, segment.y * gridSize, 
                            gridSize - 2, gridSize - 2);
-                if (index === 0) {
-                    ctx.fillStyle = '#22c55e';
-                }
             });
             
             // 画食物
@@ -76,24 +119,20 @@
         }
         
         function updateGame() {
-            if (gameOver) return;
+            if (!gameRunning) return;
             
             const head = {x: snake[0].x + dx, y: snake[0].y + dy};
             
             // 撞墙检测
             if (head.x < 0 || head.x >= tileCount || 
                 head.y < 0 || head.y >= tileCount) {
-                gameOver = true;
-                alert('游戏结束！得分: ' + score);
-                resetGame();
+                endGame();
                 return;
             }
             
             // 撞自己检测
             if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-                gameOver = true;
-                alert('游戏结束！得分: ' + score);
-                resetGame();
+                endGame();
                 return;
             }
             
@@ -118,33 +157,63 @@
             } while (snake.some(segment => segment.x === food.x && segment.y === food.y));
         }
         
-        function resetGame() {
-            snake = [{x: 10, y: 10}];
-            dx = 0;
-            dy = 0;
-            score = 0;
-            scoreEl.textContent = '得分: 0';
-            gameOver = false;
-            placeFood();
+        function startGame() {
+            if (gameRunning) return;
+            
+            gameRunning = true;
+            startBtn.textContent = '游戏中...';
+            startBtn.disabled = true;
+            startBtn.style.background = '#6b7280';
+            
+            initGame();
+            
+            gameLoop = setInterval(() => {
+                updateGame();
+                drawGame();
+            }, 100);
+        }
+        
+        function endGame() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            gameOverEl.style.display = 'block';
+            startBtn.textContent = '重新开始';
+            startBtn.disabled = false;
+            startBtn.style.background = '#4ade80';
         }
         
         document.addEventListener('keydown', (e) => {
-            if (gameOver) return;
+            if (!gameRunning) return;
             
             switch(e.key) {
-                case 'ArrowUp': if (dy === 0) { dx = 0; dy = -1; } break;
-                case 'ArrowDown': if (dy === 0) { dx = 0; dy = 1; } break;
-                case 'ArrowLeft': if (dx === 0) { dx = -1; dy = 0; } break;
-                case 'ArrowRight': if (dx === 0) { dx = 1; dy = 0; } break;
+                case 'ArrowUp': 
+                    if (dy === 0) { dx = 0; dy = -1; } 
+                    break;
+                case 'ArrowDown': 
+                    if (dy === 0) { dx = 0; dy = 1; } 
+                    break;
+                case 'ArrowLeft': 
+                    if (dx === 0) { dx = -1; dy = 0; } 
+                    break;
+                case 'ArrowRight': 
+                    if (dx === 0) { dx = 1; dy = 0; } 
+                    break;
             }
         });
         
-        // 游戏循环
-        setInterval(() => {
-            updateGame();
-            drawGame();
-        }, 100);
+        startBtn.addEventListener('click', startGame);
         
+        // 初始画面
+        ctx.fillStyle = '#0f0f23';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#4a4a6a';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('点击"开始游戏"', canvas.width/2, canvas.height/2 - 10);
+        ctx.fillText('开始贪吃蛇', canvas.width/2, canvas.height/2 + 20);
+    </script>
+</body>
+</html>
         drawGame();
     </script>
 </body>
