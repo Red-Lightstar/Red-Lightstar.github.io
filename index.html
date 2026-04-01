@@ -7,15 +7,16 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             font-family: 'Microsoft YaHei', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        /* ===== 左上角更新日志 ===== */
+        /* 左上角更新日志 */
         #logToggle {
             position: fixed;
             top: 20px;
@@ -43,10 +44,9 @@
         }
         #logToggle.open .arrow { transform: rotate(90deg); }
 
-        /* 日志展开面板 */
         #logPanel {
             position: fixed;
-            top: 68px;
+            top: 67px;
             left: 24px;
             display: none;
             background: #1e1e38;
@@ -65,18 +65,16 @@
             overflow-y: auto;
             padding-right: 14px;
         }
-        /* 滚动条样式 */
         #logScroll::-webkit-scrollbar { width: 6px; }
         #logScroll::-webkit-scrollbar-track { background: transparent; }
         #logScroll::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 3px; }
         #logScroll::-webkit-scrollbar-thumb:hover { background: #5a5a7a; }
-
         .log-item { margin-bottom: 14px; }
         .log-item:last-child { margin-bottom: 0; }
         .log-date { color: #4ade80; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
         .log-text { color: #aaa; font-size: 13px; line-height: 1.5; }
 
-        /* ===== 右上角反馈按钮 ===== */
+        /* 右上角反馈按钮 */
         #feedbackBtn {
             position: fixed;
             top: 20px;
@@ -118,33 +116,45 @@
         }
         #feedbackBtn:hover .tooltip { opacity: 1; }
 
-        /* ===== 主体内容 ===== */
-        .container { text-align: center; padding: 40px; }
+        /* 主体 */
+        .container { text-align: center; padding-top: 40px; }
         h1 {
             color: #4ade80;
             font-size: 48px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
         }
-        .subtitle { color: #888; font-size: 18px; margin-bottom: 50px; }
+        .subtitle { color: #888; font-size: 18px; margin-bottom: 40px; }
+
+        .games {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 24px;
+            max-width: 720px;
+        }
         .game-card {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid #4a4a6a;
             border-radius: 20px;
-            padding: 40px;
-            display: inline-block;
+            padding: 36px 40px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
             transition: all 0.3s ease;
             cursor: pointer;
             text-decoration: none;
+            min-width: 200px;
         }
         .game-card:hover {
             border-color: #4ade80;
             box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
             transform: translateY(-5px);
         }
-        .game-icon { font-size: 80px; margin-bottom: 20px; }
-        .game-title { color: #fff; font-size: 28px; margin-bottom: 10px; }
-        .game-desc { color: #888; font-size: 14px; }
+        .game-icon { font-size: 72px; }
+        .game-title { color: #fff; font-size: 22px; font-weight: bold; }
+        .game-desc { color: #888; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -155,18 +165,13 @@
     </button>
     <div id="logPanel">
         <div id="logScroll">
-            <!-- 最新日志在下面 -->
+            <div class="log-item">
+                <div class="log-date">2026-04-01</div>
+                <div class="log-text">Flappy Bird 游戏登场</div>
+            </div>
             <div class="log-item">
                 <div class="log-date">2026-04-01</div>
                 <div class="log-text">扫雷游戏登场</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-01</div>
-                <div class="log-text">flappybird游戏登场</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-01</div>
-                <div class="log-text">留言反馈页面加入滚轮功能</div>
             </div>
             <div class="log-item">
                 <div class="log-date">2026-04-01</div>
@@ -197,12 +202,26 @@
     <div class="container">
         <h1>🎮 游戏中心</h1>
         <p class="subtitle">选择游戏开始游玩</p>
-        
-        <a href="snake.html" class="game-card">
-            <div class="game-icon">🐍</div>
-            <div class="game-title">贪吃蛇</div>
-            <div class="game-desc">经典怀旧游戏，吃掉食物变长</div>
-        </a>
+
+        <div class="games">
+            <a href="snake.html" class="game-card">
+                <div class="game-icon">🐍</div>
+                <div class="game-title">贪吃蛇</div>
+                <div class="game-desc">吃掉食物变长，3条命</div>
+            </a>
+
+            <a href="minesweeper.html" class="game-card">
+                <div class="game-icon">💣</div>
+                <div class="game-title">扫雷</div>
+                <div class="game-desc">16×30 ，共99雷</div>
+            </a>
+
+            <a href="flappybird.html" class="game-card">
+                <div class="game-icon">🐦</div>
+                <div class="game-title">Flappy Bird</div>
+                <div class="game-desc">穿越管道，你能飞多远</div>
+            </a>
+        </div>
     </div>
 
     <script>
