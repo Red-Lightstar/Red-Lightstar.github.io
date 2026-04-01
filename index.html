@@ -18,6 +18,184 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             font-family: 'Microsoft YaHei', Arial, sans-serif;
         }
+
+        /* ===== 反馈按钮 ===== */
+        #feedbackBtn {
+            position: fixed;
+            top: 20px;
+            right: 24px;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid #4a4a6a;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 22px;
+            color: #a0a0c0;
+            transition: all 0.25s ease;
+            z-index: 100;
+            text-decoration: none;
+        }
+        #feedbackBtn:hover {
+            border-color: #4ade80;
+            color: #4ade80;
+            background: rgba(74,222,128,0.1);
+            box-shadow: 0 0 14px rgba(74,222,128,0.3);
+        }
+        #feedbackBtn .tooltip {
+            position: absolute;
+            top: 52px;
+            right: 0;
+            background: #23233a;
+            color: #ccc;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #feedbackBtn:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* ===== 反馈弹窗遮罩 ===== */
+        #feedbackOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        #feedbackOverlay.active {
+            display: flex;
+        }
+
+        /* ===== 反馈面板 ===== */
+        #feedbackPanel {
+            background: #1e1e38;
+            border: 1.5px solid #3a3a5a;
+            border-radius: 16px;
+            padding: 36px 36px 28px;
+            width: 420px;
+            max-width: 92vw;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            position: relative;
+            animation: popIn 0.22s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.88); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+        #feedbackPanel h2 {
+            color: #4ade80;
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+        #feedbackPanel .sub {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 22px;
+        }
+        #feedbackClose {
+            position: absolute;
+            top: 14px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 22px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        #feedbackClose:hover { color: #fff; }
+
+        /* 类型选择 */
+        .type-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .type-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px 0;
+            border-radius: 8px;
+            border: 1.5px solid #3a3a5a;
+            background: transparent;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .type-btn:hover, .type-btn.selected {
+            border-color: #4ade80;
+            color: #4ade80;
+            background: rgba(74,222,128,0.08);
+        }
+
+        /* 输入框 */
+        #feedbackText {
+            width: 100%;
+            height: 110px;
+            background: #13132a;
+            border: 1.5px solid #3a3a5a;
+            border-radius: 8px;
+            color: #ddd;
+            font-size: 14px;
+            padding: 12px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        #feedbackText:focus {
+            border-color: #4ade80;
+        }
+        #feedbackText::placeholder { color: #555; }
+
+        .char-count {
+            text-align: right;
+            color: #555;
+            font-size: 12px;
+            margin-top: 4px;
+            margin-bottom: 18px;
+        }
+
+        /* 提交按钮 */
+        #submitFeedback {
+            width: 100%;
+            background: #4ade80;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        #submitFeedback:hover { background: #22c55e; }
+        #submitFeedback:disabled { background: #3a3a5a; color: #666; cursor: not-allowed; }
+
+        /* 成功提示 */
+        #feedbackSuccess {
+            display: none;
+            text-align: center;
+            padding: 20px 0 10px;
+        }
+        #feedbackSuccess .icon { font-size: 48px; margin-bottom: 10px; }
+        #feedbackSuccess p { color: #4ade80; font-size: 16px; }
+        #feedbackSuccess .sub2 { color: #666; font-size: 13px; margin-top: 6px; }
+
+        /* ===== 主体内容 ===== */
         .container {
             text-align: center;
             padding: 40px;
@@ -64,6 +242,46 @@
     </style>
 </head>
 <body>
+
+    <!-- 反馈图标按钮 -->
+    <button id="feedbackBtn" title="意见反馈">
+        💬
+        <span class="tooltip">意见反馈</span>
+    </button>
+
+    <!-- 反馈弹窗 -->
+    <div id="feedbackOverlay">
+        <div id="feedbackPanel">
+            <button id="feedbackClose">×</button>
+
+            <!-- 填写区 -->
+            <div id="feedbackForm">
+                <h2>💬 意见反馈</h2>
+                <p class="sub">你的建议是我进步的动力，欢迎留言！</p>
+
+                <div class="type-row">
+                    <button class="type-btn selected" data-type="建议">💡 建议</button>
+                    <button class="type-btn" data-type="Bug">🐛 Bug</button>
+                    <button class="type-btn" data-type="夸夸">🌟 夸夸</button>
+                    <button class="type-btn" data-type="其他">💭 其他</button>
+                </div>
+
+                <textarea id="feedbackText" placeholder="请在这里输入你的留言或建议…" maxlength="300"></textarea>
+                <div class="char-count"><span id="charNum">0</span> / 300</div>
+
+                <button id="submitFeedback" disabled>提交反馈</button>
+            </div>
+
+            <!-- 成功提示 -->
+            <div id="feedbackSuccess">
+                <div class="icon">✅</div>
+                <p>反馈已收到，感谢你的留言！</p>
+                <p class="sub2">我会认真阅读每一条建议 💚</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主体 -->
     <div class="container">
         <h1>🎮 游戏中心</h1>
         <p class="subtitle">选择游戏开始游玩</p>
@@ -71,8 +289,218 @@
         <a href="snake.html" class="game-card">
             <div class="game-icon">🐍</div>
             <div class="game-title">贪吃蛇</div>
-            <div class="game-desc">经典游戏，吃掉食物变长</div>
+            <div class="game-desc">经典怀旧游戏，吃掉食物变长</div>
         </a>
     </div>
+
+    <script>
+        const feedbackBtn     = document.getElementById('feedbackBtn');
+        const feedbackOverlay = document.getElementById('feedbackOverlay');
+        const feedbackClose   = document.getElementById('feedbackClose');
+        const feedbackText    = document.getElementById('feedbackText');
+        const charNum         = document.getElementById('charNum');
+        const submitFeedback  = document.getElementById('submitFeedback');
+        const feedbackForm    = document.getElementById('feedbackForm');
+        const feedbackSuccess = document.getElementById('feedbackSuccess');
+        const typeButtons     = document.querySelectorAll('.type-btn');
+
+        let selectedType = '建议';
+
+        // 打开弹窗
+        feedbackBtn.addEventListener('click', () => {
+            feedbackOverlay.classList.add('active');
+        });
+
+        // 关闭弹窗（按钮）
+        feedbackClose.addEventListener('click', closePanel);
+
+        // 点遮罩关闭
+        feedbackOverlay.addEventListener('click', (e) => {
+            if (e.target === feedbackOverlay) closePanel();
+        });
+
+        function closePanel() {
+            feedbackOverlay.classList.remove('active');
+            // 延迟重置，等动画结束
+            setTimeout(() => {
+                feedbackForm.style.display = '';
+                feedbackSuccess.style.display = 'none';
+                feedbackText.value = '';
+                charNum.textContent = '0';
+                submitFeedback.disabled = true;
+            }, 300);
+        }
+
+        // 类型按钮切换
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                typeButtons.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedType = btn.dataset.type;
+            });
+        });
+
+        // 字数统计
+        feedbackText.addEventListener('input', () => {
+            const len = feedbackText.value.length;
+            charNum.textContent = len;
+            submitFeedback.disabled = len === 0;
+        });
+
+        // 提交反馈（本地存储）
+        submitFeedback.addEventListener('click', () => {
+            const content = feedbackText.value.trim();
+            if (!content) return;
+
+            // 存入 localStorage
+            const records = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            records.push({
+                type: selectedType,
+                content,
+                time: new Date().toLocaleString('zh-CN')
+            });
+            localStorage.setItem('feedbacks', JSON.stringify(records));
+
+            // 显示成功
+            feedbackForm.style.display = 'none';
+            feedbackSuccess.style.display = 'block';
+
+            // 2.5 秒后自动关闭
+            setTimeout(closePanel, 2500);
+        });
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+        }
+
+        /* ===== 反馈按钮 ===== */
+        #feedbackBtn {
+            position: fixed;
+            top: 20px;
+            right: 24px;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid #4a4a6a;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 22px;
+            color: #a0a0c0;
+            transition: all 0.25s ease;
+            z-index: 100;
+            text-decoration: none;
+        }
+        #feedbackBtn:hover {
+            border-color: #4ade80;
+            color: #4ade80;
+            background: rgba(74,222,128,0.1);
+            box-shadow: 0 0 14px rgba(74,222,128,0.3);
+        }
+        #feedbackBtn .tooltip {
+            position: absolute;
+            top: 52px;
+            right: 0;
+            background: #23233a;
+            color: #ccc;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #feedbackBtn:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* ===== 主体内容 ===== */
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #4ade80;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+        .subtitle {
+            color: #888;
+            font-size: 18px;
+            margin-bottom: 50px;
+        }
+        .game-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #4a4a6a;
+            border-radius: 20px;
+            padding: 40px;
+            display: inline-block;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .game-card:hover {
+            border-color: #4ade80;
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
+            transform: translateY(-5px);
+        }
+        .game-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        .game-title {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .game-desc {
+            color: #888;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 反馈图标按钮（跳转独立页面） -->
+    <a href="feedback.html" id="feedbackBtn" title="意见反馈">
+        💬
+        <span class="tooltip">意见反馈</span>
+    </a>
+
+    <!-- 主体 -->
+    <div class="container">
+        <h1>🎮 游戏中心</h1>
+        <p class="subtitle">选择游戏开始游玩</p>
+        
+        <a href="snake.html" class="game-card">
+            <div class="game-icon">🐍</div>
+            <div class="game-title">贪吃蛇</div>
+            <div class="game-desc">经典怀旧游戏，吃掉食物变长</div>
+        </a>
+    </div>
+
 </body>
 </html>
