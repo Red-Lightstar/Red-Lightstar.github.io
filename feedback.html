@@ -41,6 +41,53 @@
         }
         #backBtn:hover { background: #6b6b8a; }
 
+        /* 更新日志 */
+        #logSection {
+            width: 100%;
+            max-width: 560px;
+            margin-bottom: 20px;
+        }
+        #logToggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 0;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        #logToggle:hover { color: #aaa; }
+        #logToggle .arrow {
+            transition: transform 0.2s;
+            font-size: 10px;
+        }
+        #logToggle.open .arrow { transform: rotate(90deg); }
+        #logContent {
+            display: none;
+            background: #1e1e38;
+            border: 1px solid #2e2e4a;
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+        #logContent.show { display: block; }
+        .log-item { margin-bottom: 14px; }
+        .log-item:last-child { margin-bottom: 0; }
+        .log-date {
+            color: #4ade80;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .log-text {
+            color: #aaa;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
         /* 主面板 */
         #panel {
             background: #1e1e38;
@@ -55,6 +102,25 @@
             color: #4ade80;
             font-size: 18px;
             margin-bottom: 14px;
+            cursor: default;
+        }
+
+        /* 服务器状态 */
+        #serverStatus {
+            font-size: 12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 14px;
+        }
+        #serverStatus.online {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+        #serverStatus.offline {
+            background: rgba(255, 100, 100, 0.1);
+            color: #ff6464;
+            border: 1px solid rgba(255, 100, 100, 0.3);
         }
 
         /* 输入框 */
@@ -87,6 +153,7 @@
             font-weight: bold;
         }
         #submitBtn:hover { background: #22c55e; }
+        #submitBtn:disabled { background: #555; cursor: not-allowed; }
 
         /* 成功提示 */
         #successHint {
@@ -116,23 +183,60 @@
             border: 1px solid #2e2e4a;
             border-radius: 10px;
             padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
         }
-        .msg-meta {
+        .msg-content { flex: 1; }
+        .msg-meta { color: #555; font-size: 11px; margin-bottom: 6px; }
+        .msg-text { color: #ccc; font-size: 14px; line-height: 1.6; word-break: break-all; }
+        #noMsg { color: #444; font-size: 13px; text-align: center; padding: 20px 0; }
+
+        /* 刷新按钮 */
+        #refreshBtn {
+            background: #2e2e4a;
+            color: #888;
+            border: 1px solid #3a3a5a;
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        #refreshBtn:hover { background: #3a3a5a; }
+
+        /* 清空按钮 */
+        #clearBtn {
+            background: #4a2e2e;
+            color: #ff6464;
+            border: 1px solid #5a3a3a;
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 8px;
+            display: none;
+        }
+        #clearBtn.show { display: inline-block; }
+        #clearBtn:hover { background: #5a3a3a; }
+
+        /* 删除按钮 */
+        .deleteBtn {
+            background: transparent;
             color: #555;
+            border: 1px solid #3a3a5a;
+            padding: 4px 10px;
             font-size: 11px;
-            margin-bottom: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: none;
         }
-        .msg-text {
-            color: #ccc;
-            font-size: 14px;
-            line-height: 1.6;
-            word-break: break-all;
-        }
-        #noMsg {
-            color: #444;
-            font-size: 13px;
-            text-align: center;
-            padding: 20px 0;
+        .deleteBtn.show { display: inline-block; }
+        .deleteBtn:hover {
+            background: #ff6464;
+            color: #fff;
+            border-color: #ff6464;
         }
     </style>
 </head>
@@ -143,57 +247,280 @@
         <a href="index.html" id="backBtn">返回主页</a>
     </div>
 
+    <!-- 更新日志 -->
+    <div id="logSection">
+        <button id="logToggle">
+            <span class="arrow">▶</span> 📋 更新日志
+        </button>
+        <div id="logContent">
+            <div class="log-item">
+                <div class="log-date">2026-04-01</div>
+                <div class="log-text">新增留言板功能</div>
+            </div>
+        </div>
+    </div>
+
     <div id="panel">
-        <h2>💬 留言反馈</h2>
+        <h2 id="panelTitle">💬 留言反馈</h2>
+        <div id="serverStatus" class="offline">🔄 正在连接服务器...</div>
         <textarea id="msgInput" placeholder="想说点什么？留下你的建议吧…"></textarea>
         <button id="submitBtn">提交留言</button>
         <div id="successHint">✅ 感谢留言，已收到！</div>
     </div>
 
-    <div id="historyTitle">📋 全部留言</div>
+    <div id="historyTitle">
+        📋 全部留言
+        <button id="refreshBtn">🔄 刷新</button>
+        <button id="clearBtn">🗑️ 清空</button>
+    </div>
+
     <div id="list"></div>
 
     <script>
-        const msgInput   = document.getElementById('msgInput');
-        const submitBtn  = document.getElementById('submitBtn');
-        const successHint = document.getElementById('successHint');
-        const list       = document.getElementById('list');
+        // ==========================================
+        // ⚙️ 服务器配置（Cloudflare Tunnel 地址）
+        // ==========================================
+        const SERVER_URL = 'https://classifieds-handy-dear-coalition.trycloudflare.com';
+        // ==========================================
 
-        // 提交
-        submitBtn.addEventListener('click', () => {
+        // ===== 隐藏管理入口：点击"留言反馈"标题6次触发 =====
+        let secretClicks = 0;
+        const panelTitle = document.getElementById('panelTitle');
+        panelTitle.addEventListener('click', () => {
+            secretClicks++;
+            if (secretClicks >= 6) {
+                secretClicks = 0;
+                const pwd = prompt('请输入管理密码：');
+                if (pwd) checkAdmin(pwd);
+            }
+        });
+
+        const msgInput      = document.getElementById('msgInput');
+        const submitBtn     = document.getElementById('submitBtn');
+        const successHint   = document.getElementById('successHint');
+        const list          = document.getElementById('list');
+        const logToggle     = document.getElementById('logToggle');
+        const logContent    = document.getElementById('logContent');
+        const serverStatus  = document.getElementById('serverStatus');
+        const refreshBtn    = document.getElementById('refreshBtn');
+        const clearBtn      = document.getElementById('clearBtn');
+
+        let isAdmin = false;
+        let serverOnline = false;
+
+        // 页面加载时：若已有保存的密码且服务器在线，自动验证
+        const savedPwd = localStorage.getItem('adminPwd');
+        if (savedPwd) {
+            (async () => {
+                await checkServer();
+                if (serverOnline) {
+                    await checkAdmin(savedPwd);
+                }
+            })();
+        }
+
+        // 更新日志展开/收起
+        logToggle.addEventListener('click', () => {
+            logToggle.classList.toggle('open');
+            logContent.classList.toggle('show');
+        });
+
+        // 检查服务器状态
+        async function checkServer() {
+            try {
+                const res = await fetch(`${SERVER_URL}/messages`, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    serverOnline = true;
+                    serverStatus.className = 'online';
+                    serverStatus.textContent = '✅ 服务器已连接';
+                    return true;
+                }
+            } catch (e) { /* ignore */ }
+            serverOnline = false;
+            serverStatus.className = 'offline';
+            serverStatus.textContent = '❌ 服务器未连接（留言仅本地保存）';
+            return false;
+        }
+
+        // 提交留言
+        async function submitMessage() {
             const text = msgInput.value.trim();
             if (!text) return;
 
-            const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
-            msgs.unshift({
-                text,
-                time: new Date().toLocaleString('zh-CN')
-            });
-            localStorage.setItem('msgs', JSON.stringify(msgs));
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
 
-            msgInput.value = '';
-            successHint.style.display = 'block';
-            render();
+            if (serverOnline) {
+                try {
+                    const res = await fetch(`${SERVER_URL}/messages`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text })
+                    });
+                    if (res.ok) {
+                        msgInput.value = '';
+                        successHint.style.display = 'block';
+                        await loadMessages();
+                        setTimeout(() => { successHint.style.display = 'none'; }, 3000);
+                    } else {
+                        alert('提交失败，请重试');
+                    }
+                } catch (e) {
+                    alert('网络错误，请检查服务器是否运行');
+                }
+            } else {
+                const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
+                msgs.unshift({
+                    text,
+                    time: new Date().toLocaleString('zh-CN'),
+                    offline: true
+                });
+                localStorage.setItem('msgs', JSON.stringify(msgs));
+                msgInput.value = '';
+                successHint.textContent = '📴 离线模式：已本地保存';
+                successHint.style.display = 'block';
+                renderLocal();
+                setTimeout(() => {
+                    successHint.style.display = 'none';
+                    successHint.textContent = '✅ 感谢留言，已收到！';
+                }, 3000);
+            }
 
-            setTimeout(() => { successHint.style.display = 'none'; }, 2000);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交留言';
+        }
+
+        submitBtn.addEventListener('click', submitMessage);
+        msgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitMessage();
+            }
         });
 
-        // 渲染
-        function render() {
+        // 加载留言
+        async function loadMessages() {
+            if (serverOnline) {
+                try {
+                    const res = await fetch(`${SERVER_URL}/messages`);
+                    if (res.ok) {
+                        const msgs = await res.json();
+                        renderMessages(msgs);
+                        return;
+                    }
+                } catch (e) { /* fall through */ }
+            }
+            renderLocal();
+        }
+
+        function renderLocal() {
             const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
+            renderMessages(msgs);
+        }
+
+        function renderMessages(msgs) {
             if (msgs.length === 0) {
                 list.innerHTML = '<div id="noMsg">暂无留言，快来抢沙发吧 ✨</div>';
                 return;
             }
             list.innerHTML = msgs.map(m => `
                 <div class="msg-card">
-                    <div class="msg-meta">${m.time}</div>
-                    <div class="msg-text">${m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
+                    <div class="msg-content">
+                        <div class="msg-meta">${m.time}${m.offline ? ' 📴(离线)' : ''}</div>
+                        <div class="msg-text">${(m.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
+                    </div>
+                    ${m.id ? `<button class="deleteBtn${isAdmin ? ' show' : ''}" onclick="deleteMessage(${m.id})">删除</button>` : ''}
                 </div>
             `).join('');
         }
 
-        render();
+        // 验证管理员密码
+        async function checkAdmin(pwd) {
+            if (!serverOnline) {
+                alert('⚠️ 服务器未连接，无法验证');
+                return;
+            }
+            try {
+                const res = await fetch(`${SERVER_URL}/messages/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pwd },
+                    body: JSON.stringify({ test: true })
+                });
+                if (res.ok) {
+                    isAdmin = true;
+                    localStorage.setItem('adminPwd', pwd);
+                    panelTitle.textContent = '🔓 留言反馈（已解锁）';
+                    document.querySelectorAll('.deleteBtn').forEach(b => b.classList.add('show'));
+                    clearBtn.classList.add('show');
+                    alert('✅ 管理功能已解锁！可删除留言或清空全部。');
+                    await loadMessages();
+                } else {
+                    isAdmin = false;
+                    localStorage.removeItem('adminPwd');
+                    alert('❌ 密码错误');
+                }
+            } catch (e) {
+                alert('⚠️ 网络错误，无法验证');
+            }
+        }
+        window.deleteMessage = async function(id) {
+            if (!isAdmin) { alert('请先验证管理密码'); return; }
+            if (!confirm('确定删除这条留言？')) return;
+            try {
+                const res = await fetch(`${SERVER_URL}/messages/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Password': localStorage.getItem('adminPwd') || '' }
+                });
+                if (res.ok) {
+                    await loadMessages();
+                } else {
+                    alert('删除失败：密码错误或无权限');
+                }
+            } catch (e) {
+                alert('网络错误');
+            }
+        };
+
+        async function clearAll() {
+            if (!isAdmin) { alert('请先验证管理密码'); return; }
+            if (!confirm('确定清空全部留言？此操作不可恢复！')) return;
+            if (!confirm('再次确认：清空后无法恢复，确定吗？')) return;
+            try {
+                const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
+                for (const m of msgs) {
+                    if (m.id) {
+                        await fetch(`${SERVER_URL}/messages/${m.id}`, {
+                            method: 'DELETE',
+                            headers: { 'X-Admin-Password': localStorage.getItem('adminPwd') || '' }
+                        });
+                    }
+                }
+                localStorage.removeItem('msgs');
+                await loadMessages();
+            } catch (e) {
+                alert('清空失败');
+            }
+        }
+
+        clearBtn.addEventListener('click', clearAll);
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.textContent = '🔄 刷新中...';
+            await checkServer();
+            await loadMessages();
+            refreshBtn.textContent = '🔄 刷新';
+        });
+
+        (async () => {
+            await checkServer();
+            await loadMessages();
+        })();
+    </script>
+</body>
+</html>
+
     </script>
 </body>
 </html>
