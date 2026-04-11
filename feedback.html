@@ -254,6 +254,10 @@
         </button>
         <div id="logContent">
             <div class="log-item">
+                <div class="log-date">2026-04-11</div>
+                <div class="log-text">服务器迁移至 Supabase，永久在线</div>
+            </div>
+            <div class="log-item">
                 <div class="log-date">2026-04-01</div>
                 <div class="log-text">新增留言板功能</div>
             </div>
@@ -276,11 +280,17 @@
 
     <div id="list"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // ==========================================
-        // ⚙️ 服务器配置（Cloudflare Tunnel 地址）
+        // ⚙️ Supabase 配置（永久地址，不用再改）
         // ==========================================
-        const SERVER_URL = 'https://classifieds-handy-dear-coalition.trycloudflare.com';
+        const SUPABASE_URL = 'https://ujpvdztgntjkhqaecpjt.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_ZGBIkuOZeeGKW3sJzxCAAw__jjtiueV';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 管理员密码（改成一个你自己记得的密码）
+        const ADMIN_PASSWORD = 'dj123321';
         // ==========================================
 
         // ===== 隐藏管理入口：点击"留言反馈"标题6次触发 =====
@@ -308,15 +318,10 @@
         let isAdmin = false;
         let serverOnline = false;
 
-        // 页面加载时：若已有保存的密码且服务器在线，自动验证
+        // 页面加载时：若已有保存的密码，自动验证
         const savedPwd = localStorage.getItem('adminPwd');
         if (savedPwd) {
-            (async () => {
-                await checkServer();
-                if (serverOnline) {
-                    await checkAdmin(savedPwd);
-                }
-            })();
+            checkAdmin(savedPwd);
         }
 
         // 更新日志展开/收起
@@ -328,11 +333,10 @@
         // 检查服务器状态
         async function checkServer() {
             try {
-                const res = await fetch(`${SERVER_URL}/messages`, {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                if (res.ok) {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('id', { count: 'exact', head: true });
+                if (!error) {
                     serverOnline = true;
                     serverStatus.className = 'online';
                     serverStatus.textContent = '✅ 服务器已连接';
@@ -341,7 +345,7 @@
             } catch (e) { /* ignore */ }
             serverOnline = false;
             serverStatus.className = 'offline';
-            serverStatus.textContent = '❌ 服务器未连接（留言仅本地保存）';
+            serverStatus.textContent = '❌ 服务器未连接';
             return false;
         }
 
@@ -353,40 +357,22 @@
             submitBtn.disabled = true;
             submitBtn.textContent = '提交中...';
 
-            if (serverOnline) {
-                try {
-                    const res = await fetch(`${SERVER_URL}/messages`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text })
-                    });
-                    if (res.ok) {
-                        msgInput.value = '';
-                        successHint.style.display = 'block';
-                        await loadMessages();
-                        setTimeout(() => { successHint.style.display = 'none'; }, 3000);
-                    } else {
-                        alert('提交失败，请重试');
-                    }
-                } catch (e) {
-                    alert('网络错误，请检查服务器是否运行');
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .insert({ text: text, offline: false })
+                    .select();
+
+                if (!error) {
+                    msgInput.value = '';
+                    successHint.style.display = 'block';
+                    await loadMessages();
+                    setTimeout(() => { successHint.style.display = 'none'; }, 3000);
+                } else {
+                    alert('提交失败：' + error.message);
                 }
-            } else {
-                const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
-                msgs.unshift({
-                    text,
-                    time: new Date().toLocaleString('zh-CN'),
-                    offline: true
-                });
-                localStorage.setItem('msgs', JSON.stringify(msgs));
-                msgInput.value = '';
-                successHint.textContent = '📴 离线模式：已本地保存';
-                successHint.style.display = 'block';
-                renderLocal();
-                setTimeout(() => {
-                    successHint.style.display = 'none';
-                    successHint.textContent = '✅ 感谢留言，已收到！';
-                }, 3000);
+            } catch (e) {
+                alert('网络错误，请检查网络连接');
             }
 
             submitBtn.disabled = false;
@@ -403,16 +389,19 @@
 
         // 加载留言
         async function loadMessages() {
-            if (serverOnline) {
-                try {
-                    const res = await fetch(`${SERVER_URL}/messages`);
-                    if (res.ok) {
-                        const msgs = await res.json();
-                        renderMessages(msgs);
-                        return;
-                    }
-                } catch (e) { /* fall through */ }
-            }
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!error) {
+                    renderMessages(data || []);
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+
+            // 失败时显示本地缓存
             renderLocal();
         }
 
@@ -426,80 +415,73 @@
                 list.innerHTML = '<div id="noMsg">暂无留言，快来抢沙发吧 ✨</div>';
                 return;
             }
-            list.innerHTML = msgs.map(m => `
+            list.innerHTML = msgs.map(m => {
+                const timeStr = m.created_at
+                    ? new Date(m.created_at).toLocaleString('zh-CN')
+                    : (m.time || '');
+                const isOffline = m.offline;
+                return `
                 <div class="msg-card">
                     <div class="msg-content">
-                        <div class="msg-meta">${m.time}${m.offline ? ' 📴(离线)' : ''}</div>
+                        <div class="msg-meta">${timeStr}${isOffline ? ' 📴(离线)' : ''}</div>
                         <div class="msg-text">${(m.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
                     </div>
-                    ${m.id ? `<button class="deleteBtn${isAdmin ? ' show' : ''}" onclick="deleteMessage(${m.id})">删除</button>` : ''}
+                    ${m.id ? `<button class="deleteBtn${isAdmin ? ' show' : ''}" onclick="deleteMessage('${m.id}')">删除</button>` : ''}
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // 验证管理员密码
-        async function checkAdmin(pwd) {
-            if (!serverOnline) {
-                alert('⚠️ 服务器未连接，无法验证');
-                return;
-            }
-            try {
-                const res = await fetch(`${SERVER_URL}/messages/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pwd },
-                    body: JSON.stringify({ test: true })
-                });
-                if (res.ok) {
-                    isAdmin = true;
-                    localStorage.setItem('adminPwd', pwd);
-                    panelTitle.textContent = '🔓 留言反馈（已解锁）';
-                    document.querySelectorAll('.deleteBtn').forEach(b => b.classList.add('show'));
-                    clearBtn.classList.add('show');
-                    alert('✅ 管理功能已解锁！可删除留言或清空全部。');
-                    await loadMessages();
-                } else {
-                    isAdmin = false;
-                    localStorage.removeItem('adminPwd');
-                    alert('❌ 密码错误');
-                }
-            } catch (e) {
-                alert('⚠️ 网络错误，无法验证');
+        function checkAdmin(pwd) {
+            if (pwd === ADMIN_PASSWORD) {
+                isAdmin = true;
+                localStorage.setItem('adminPwd', pwd);
+                panelTitle.textContent = '🔓 留言反馈（已解锁）';
+                document.querySelectorAll('.deleteBtn').forEach(b => b.classList.add('show'));
+                clearBtn.classList.add('show');
+                loadMessages();
+            } else {
+                isAdmin = false;
+                localStorage.removeItem('adminPwd');
+                alert('❌ 密码错误');
             }
         }
+
+        // 删除留言
         window.deleteMessage = async function(id) {
             if (!isAdmin) { alert('请先验证管理密码'); return; }
             if (!confirm('确定删除这条留言？')) return;
             try {
-                const res = await fetch(`${SERVER_URL}/messages/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'X-Admin-Password': localStorage.getItem('adminPwd') || '' }
-                });
-                if (res.ok) {
+                const { error } = await supabase
+                    .from('messages')
+                    .delete()
+                    .eq('id', id);
+                if (!error) {
                     await loadMessages();
                 } else {
-                    alert('删除失败：密码错误或无权限');
+                    alert('删除失败');
                 }
             } catch (e) {
                 alert('网络错误');
             }
         };
 
+        // 清空全部
         async function clearAll() {
             if (!isAdmin) { alert('请先验证管理密码'); return; }
             if (!confirm('确定清空全部留言？此操作不可恢复！')) return;
             if (!confirm('再次确认：清空后无法恢复，确定吗？')) return;
             try {
-                const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
-                for (const m of msgs) {
-                    if (m.id) {
-                        await fetch(`${SERVER_URL}/messages/${m.id}`, {
-                            method: 'DELETE',
-                            headers: { 'X-Admin-Password': localStorage.getItem('adminPwd') || '' }
-                        });
-                    }
+                const { error } = await supabase
+                    .from('messages')
+                    .delete()
+                    .neq('id', '00000000-0000-0000-0000-000000000000'); // 删除全部
+                if (!error) {
+                    await loadMessages();
+                } else {
+                    alert('清空失败');
                 }
-                localStorage.removeItem('msgs');
-                await loadMessages();
             } catch (e) {
                 alert('清空失败');
             }
@@ -517,10 +499,6 @@
             await checkServer();
             await loadMessages();
         })();
-    </script>
-</body>
-</html>
-
     </script>
 </body>
 </html>
