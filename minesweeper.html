@@ -30,6 +30,32 @@
             text-decoration: none; transition: background 0.2s;
         }
         #backBtn:hover { background: #6b6b8a; }
+
+        /* 模式选择 */
+        #modeBar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .modeBtn {
+            padding: 6px 16px;
+            border: 1px solid #3a3a5a;
+            border-radius: 6px;
+            background: #1e1e38;
+            color: #888;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .modeBtn:hover { background: #2a2a4a; color: #ccc; }
+        .modeBtn.active {
+            background: #4ade80;
+            color: #1a1a2e;
+            border-color: #4ade80;
+            font-weight: bold;
+        }
+
         #infoBar {
             display: flex;
             justify-content: space-between;
@@ -76,6 +102,8 @@
         .cell.mine { background: #f87171; }
         .cell.flag { background: #2a2a4a; }
         .cell.flag::after { content: '🚩'; }
+        .cell.question { background: #2a2a4a; }
+        .cell.question::after { content: '?'; color: #fbbf24; font-size: 15px; }
         .cell.n1 { color: #60a5fa; }
         .cell.n2 { color: #34d399; }
         .cell.n3 { color: #f87171; }
@@ -120,15 +148,21 @@
         <a href="index.html" id="backBtn">返回主页</a>
     </div>
 
+    <div id="modeBar">
+        <button class="modeBtn" data-mode="small">小</button>
+        <button class="modeBtn active" data-mode="medium">中</button>
+        <button class="modeBtn" data-mode="large">大</button>
+    </div>
+
     <div id="infoBar">
-        <div id="mineCount">💣 99</div>
+        <div id="mineCount">💣 40</div>
         <button id="restartBtn" style="background:#4ade80;color:#1a1a2e;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold;">重新开始</button>
         <div id="timer">⏱ 0</div>
     </div>
 
     <div id="board"></div>
     <div id="hint">
-        <span>左键</span> 翻开 · <span>右键</span> 标记旗帜
+        <span>左键</span> 翻开 · <span>右键</span> 标记旗帜（循环：旗帜 → 问号 → 清除）
     </div>
 
     <div id="overlay">
@@ -141,11 +175,20 @@
     </div>
 
     <script>
-        const ROWS = 16, COLS = 30, MINES = 99;
+        // 难度配置：小(9x9/10)、中(16x16/40)、大(16x30/99)
+        const MODES = {
+            small:  { rows: 9,  cols: 9,  mines: 10,  label: '小' },
+            medium: { rows: 16, cols: 16, mines: 40,  label: '中' },
+            large:  { rows: 16, cols: 30, mines: 99,  label: '大' }
+        };
+
         const STORAGE_KEY = 'minesweeper_save';
-        let board = [], revealed = [], flagged = [], mineSet = new Set();
+        let ROWS, COLS, MINES;
+        let board = [], revealed = [], flagged = [], questions = [], mineSet = new Set();
         let gameOver = false, gameWon = false, timerInterval = null, seconds = 0, timerStarted = false;
         let flagCount = 0;
+        let currentMode = 'medium';
+
         const boardEl = document.getElementById('board');
         const overlay = document.getElementById('overlay');
         const overlayIcon = document.getElementById('overlayIcon');
@@ -155,15 +198,26 @@
         const timerEl = document.getElementById('timer');
         const restartBtn = document.getElementById('restartBtn');
         const restartBtn2 = document.getElementById('restartBtn2');
+        const modeBtns = document.querySelectorAll('.modeBtn');
 
-        boardEl.style.gridTemplateColumns = `repeat(${COLS}, 26px)`;
+        function setCellSize() {
+            const mode = MODES[currentMode];
+            // 根据格子数量自适应大小
+            if (mode.cols >= 30) {
+                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 26px)`;
+            } else if (mode.cols >= 16) {
+                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 30px)`;
+            } else {
+                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 36px)`;
+            }
+        }
 
         function saveGame() {
             const saveData = {
-                board: board, revealed: revealed, flagged: flagged,
+                board: board, revealed: revealed, flagged: flagged, questions: questions,
                 mineSet: Array.from(mineSet), flagCount: flagCount,
                 seconds: seconds, timerStarted: timerStarted,
-                gameOver: gameOver, gameWon: gameWon
+                gameOver: gameOver, gameWon: gameWon, currentMode: currentMode
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
         }
@@ -173,13 +227,27 @@
             if (!saved) return false;
             try {
                 const data = JSON.parse(saved);
+                if (!MODES[data.currentMode]) return false;
+                currentMode = data.currentMode;
+                ROWS = MODES[currentMode].rows;
+                COLS = MODES[currentMode].cols;
+                MINES = MODES[currentMode].mines;
                 board = data.board; revealed = data.revealed;
-                flagged = data.flagged; mineSet = new Set(data.mineSet);
+                flagged = data.flagged;
+                questions = data.questions || Array.from({length: ROWS}, () => Array(COLS).fill(false));
+                mineSet = new Set(data.mineSet);
                 flagCount = data.flagCount; seconds = data.seconds;
                 timerStarted = data.timerStarted;
                 gameOver = data.gameOver; gameWon = data.gameWon;
+                updateModeButtons();
                 return true;
             } catch (e) { return false; }
+        }
+
+        function updateModeButtons() {
+            modeBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === currentMode);
+            });
         }
 
         function initGame(clearSave = true) {
@@ -189,11 +257,19 @@
             clearInterval(timerInterval);
             timerEl.textContent = '⏱ 0';
             overlay.classList.remove('show');
+
+            ROWS = MODES[currentMode].rows;
+            COLS = MODES[currentMode].cols;
+            MINES = MODES[currentMode].mines;
+
             board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
             revealed = Array.from({length: ROWS}, () => Array(COLS).fill(false));
             flagged = Array.from({length: ROWS}, () => Array(COLS).fill(false));
+            questions = Array.from({length: ROWS}, () => Array(COLS).fill(false));
             mineSet.clear();
-            renderBoard(); updateMineCount();
+            setCellSize();
+            renderBoard();
+            updateMineCount();
         }
 
         function placeMines(excludeR, excludeC) {
@@ -227,7 +303,12 @@
         function reveal(r, c) {
             if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
             if (revealed[r][c] || flagged[r][c]) return;
-            revealed[r][c] = true; saveGame();
+            revealed[r][c] = true;
+            // 清除问号标记
+            if (questions[r][c]) {
+                questions[r][c] = false;
+            }
+            saveGame();
             if (board[r][c] === -1) { endGame(false); return; }
             if (board[r][c] === 0)
                 for (let dr = -1; dr <= 1; dr++)
@@ -235,12 +316,27 @@
             checkWin();
         }
 
+        // 右键循环：空 → 旗帜 → 问号 → 空
         function toggleFlag(r, c, e) {
             e.preventDefault();
             if (revealed[r][c] || gameOver) return;
-            flagged[r][c] = !flagged[r][c];
-            flagCount += flagged[r][c] ? 1 : -1;
-            updateMineCount(); saveGame(); renderCell(r, c);
+
+            if (!flagged[r][c] && !questions[r][c]) {
+                // 当前无标记 → 插旗帜
+                flagged[r][c] = true;
+                flagCount++;
+            } else if (flagged[r][c]) {
+                // 旗帜 → 问号
+                flagged[r][c] = false;
+                questions[r][c] = true;
+            } else if (questions[r][c]) {
+                // 问号 → 清除
+                questions[r][c] = false;
+                flagCount--;
+            }
+            updateMineCount();
+            saveGame();
+            renderCell(r, c);
         }
 
         function updateMineCount() {
@@ -291,7 +387,11 @@
                 cell.classList.add('revealed');
                 if (board[r][c] === -1) { cell.classList.add('mine'); cell.textContent = '💣'; }
                 else if (board[r][c] > 0) { cell.classList.add(`n${board[r][c]}`); cell.textContent = board[r][c]; }
-            } else if (flagged[r][c]) cell.classList.add('flag');
+            } else if (flagged[r][c]) {
+                cell.classList.add('flag');
+            } else if (questions[r][c]) {
+                cell.classList.add('question');
+            }
         }
 
         function renderBoard() {
@@ -305,7 +405,11 @@
                         cell.classList.add('revealed');
                         if (board[r][c] === -1) { cell.classList.add('mine'); cell.textContent = '💣'; }
                         else if (board[r][c] > 0) { cell.classList.add(`n${board[r][c]}`); cell.textContent = board[r][c]; }
-                    } else if (flagged[r][c]) cell.classList.add('flag');
+                    } else if (flagged[r][c]) {
+                        cell.classList.add('flag');
+                    } else if (questions[r][c]) {
+                        cell.classList.add('question');
+                    }
                     cell.addEventListener('click', handleClick);
                     cell.addEventListener('contextmenu', (e) => toggleFlag(r, c, e));
                     boardEl.appendChild(cell);
@@ -321,10 +425,32 @@
             reveal(r, c); renderBoard();
         }
 
+        // 模式切换
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.mode === currentMode) return;
+                currentMode = btn.dataset.mode;
+                updateModeButtons();
+                initGame(true);
+            });
+        });
+
         window.addEventListener('beforeunload', () => { if (!gameOver && timerStarted) saveGame(); });
 
-        if (!loadGame()) initGame();
-        else { renderBoard(); updateMineCount(); timerEl.textContent = `⏱ ${seconds}`; if (timerStarted && !gameOver) startTimer(); if (gameOver) setTimeout(() => overlay.classList.add('show'), 300); }
+        if (!loadGame()) {
+            ROWS = MODES[currentMode].rows;
+            COLS = MODES[currentMode].cols;
+            MINES = MODES[currentMode].mines;
+            updateModeButtons();
+            setCellSize();
+            initGame();
+        } else {
+            setCellSize();
+            renderBoard(); updateMineCount();
+            timerEl.textContent = `⏱ ${seconds}`;
+            if (timerStarted && !gameOver) startTimer();
+            if (gameOver) setTimeout(() => overlay.classList.add('show'), 300);
+        }
 
         restartBtn.addEventListener('click', () => initGame(true));
         restartBtn2.addEventListener('click', () => initGame(true));
