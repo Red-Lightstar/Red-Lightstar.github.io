@@ -202,13 +202,13 @@
 
         function setCellSize() {
             const mode = MODES[currentMode];
-            // 根据格子数量自适应大小
+            // 根据模式自适应格子大小和间距
             if (mode.cols >= 30) {
                 boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 26px)`;
             } else if (mode.cols >= 16) {
-                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 30px)`;
+                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 32px)`;
             } else {
-                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 36px)`;
+                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 38px)`;
             }
         }
 
@@ -436,6 +436,13 @@
         });
 
         window.addEventListener('beforeunload', () => { if (!gameOver && timerStarted) saveGame(); });
+
+        // 页面可见性变化时保存（如切换标签页、最小化、切换应用）
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && !gameOver && timerStarted) {
+                saveGame();
+            }
+        });
 
         if (!loadGame()) {
             ROWS = MODES[currentMode].rows;
