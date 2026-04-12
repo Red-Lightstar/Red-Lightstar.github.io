@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird</title>
+    <title>Flappy Plane</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -95,15 +95,165 @@
         const scoreDisplay = document.getElementById('scoreDisplay');
         const bestDisplay = document.getElementById('bestDisplay');
 
-        const GRAVITY = 0.45;
-        const FLAP = -7.5;
+        const GRAVITY = 0.3;
+        const FLAP = -6.5;
         const PIPE_W = 60;
         const PIPE_GAP = 165;
         const PIPE_SPEED = 2.5;
         const PIPE_INTERVAL = 110;
 
+        // =============================================
+        //  ✈️ 飞机图片配置
+        // =============================================
+        const PLANE_IMG_SRC = '飞机_clean.png'; // ← 去掉天空背景的飞机图片
+        const PLANE_WIDTH   = 120;          // ← 显示宽度（像素）
+        const PLANE_HEIGHT  = 60;           // ← 显示高度（像素）
+        const BIRD_RADIUS   = 16;           // ← 碰撞检测半径
+        // =============================================
+
+        // 预加载飞机图片
+        const planeImg = new Image();
+        planeImg.onerror = function() {
+            console.warn('飞机图片加载失败！请检查文件是否存在：' + PLANE_IMG_SRC);
+        };
+        planeImg.onload = function() {
+            console.log('飞机图片加载成功！尺寸：' + this.naturalWidth + 'x' + this.naturalHeight);
+        };
+        planeImg.src = PLANE_IMG_SRC + '?t=' + Date.now();
+
+        // =============================================
+        //  🏢 管道替换为塔图片配置
+        // =============================================
+        const TOWER_IMG_SRC = '塔_nobg.png';  // ← 去掉背景的塔图片
+        const TOWER_WIDTH   = 70;             // ← 塔在管道位置的显示宽度
+        const TOWER_CAP_W   = 82;             // ← 塔帽檐宽度（比主体略宽）
+        const TOWER_CAP_H   = 30;             // ← 塔帽檐高度
+        // =============================================
+
+        // 预加载塔图片
+        const towerImg = new Image();
+        towerImg.onerror = function() {
+            console.warn('塔图片加载失败！请检查文件是否存在：' + TOWER_IMG_SRC);
+        };
+        towerImg.onload = function() {
+            console.log('塔图片加载成功！尺寸：' + this.naturalWidth + 'x' + this.naturalHeight);
+        };
+        towerImg.src = TOWER_IMG_SRC + '?t=' + Date.now(); // 加时间戳防缓存
+
         let bird, pipes, score, best, gameState, pipeTimer, animId;
         let frameCount = 0;
+
+        // =============================================
+        //  💥 爆炸粒子系统
+        // =============================================
+        let particles = [];
+
+        // 🔥 创建火焰爆炸
+        function createExplosion(x, y) {
+            // 火焰核心（明亮，小而集中）
+            for (let i = 0; i < 8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.5 + Math.random() * 1.5;
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 10,
+                    y: y + (Math.random() - 0.5) * 10,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1.5,
+                    radius: 6 + Math.random() * 8,
+                    life: 1.0,
+                    decay: 0.025 + Math.random() * 0.015,
+                    type: 'core'
+                });
+            }
+            // 火焰外层（橙红色，中等大小）
+            for (let i = 0; i < 6; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 2;
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 15,
+                    y: y + (Math.random() - 0.5) * 15,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1,
+                    radius: 10 + Math.random() * 12,
+                    life: 0.8,
+                    decay: 0.02 + Math.random() * 0.01,
+                    type: 'flame'
+                });
+            }
+            // 黑烟（上升扩散）
+            for (let i = 0; i < 4; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 20,
+                    y: y - 10,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: -0.5 - Math.random() * 1,
+                    radius: 12 + Math.random() * 10,
+                    life: 0.6,
+                    decay: 0.008 + Math.random() * 0.005,
+                    type: 'smoke'
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // 火焰向上飘
+                if (p.type === 'core' || p.type === 'flame') {
+                    p.vy -= 0.03;
+                }
+                // 烟雾向上加速
+                if (p.type === 'smoke') {
+                    p.vy -= 0.01;
+                    p.radius += 0.3;
+                }
+                p.vx *= 0.98;
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            for (const p of particles) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life);
+
+                if (p.type === 'core') {
+                    // 火焰核心：黄白色，径向渐变
+                    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+                    grad.addColorStop(0, `rgba(255,255,220,${p.life})`);
+                    grad.addColorStop(0.4, `rgba(255,220,80,${p.life * 0.8})`);
+                    grad.addColorStop(1, 'rgba(255,120,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 'flame') {
+                    // 火焰外层：橙红色渐变
+                    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+                    grad.addColorStop(0, `rgba(255,160,30,${p.life * 0.7})`);
+                    grad.addColorStop(0.5, `rgba(220,60,10,${p.life * 0.5})`);
+                    grad.addColorStop(1, 'rgba(100,20,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 'smoke') {
+                    // 黑烟
+                    ctx.fillStyle = `rgba(40,40,40,${p.life * 0.4})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
 
         best = +localStorage.getItem('flappyBest') || 0;
         bestDisplay.textContent = `👑 ${best}`;
@@ -123,15 +273,20 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawBg();
 
-            ctx.save();
-            ctx.translate(bird.x, bird.y);
-            drawBirdShape(0, 0);
-            ctx.restore();
+            // 待机画面也显示飞机图片
+            if (planeImg.complete && planeImg.naturalWidth > 0) {
+                ctx.save();
+                ctx.translate(bird.x, bird.y);
+                ctx.drawImage(planeImg, -PLANE_WIDTH / 2, -PLANE_HEIGHT / 2, PLANE_WIDTH, PLANE_HEIGHT);
+                ctx.restore();
+            } else {
+                drawBird(bird.x, bird.y, 0);
+            }
 
             ctx.fillStyle = '#4ade80';
             ctx.font = 'bold 28px Microsoft YaHei';
             ctx.textAlign = 'center';
-            ctx.fillText('Flappy Bird', canvas.width / 2, canvas.height / 2 - 60);
+            ctx.fillText('Flappy Plane', canvas.width / 2, canvas.height / 2 - 60);
 
             ctx.fillStyle = '#888';
             ctx.font = '15px Microsoft YaHei';
@@ -160,30 +315,44 @@
             ctx.fillRect(0, canvas.height - 60, canvas.width, 3);
         }
 
-        // 绘制原版风格小鸟
+        // =============================================
+        //  绘制角色：始终使用飞机图片
+        //  （图片加载失败时降级为原版小鸟）
+        // =============================================
+        function drawBird(x, y, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            if (planeImg.complete && planeImg.naturalWidth > 0) {
+                ctx.drawImage(planeImg, -PLANE_WIDTH / 2, -PLANE_HEIGHT / 2, PLANE_WIDTH, PLANE_HEIGHT);
+            } else {
+                drawBirdShape(0, 0);
+            }
+
+            ctx.restore();
+        }
+
+        // 降级方案：原版黄色小鸟
         function drawBirdShape(rotation, wingPhase) {
             ctx.save();
             ctx.rotate(rotation);
 
             const wingY = Math.sin(wingPhase) * 3;
 
-            // 身体阴影
             ctx.fillStyle = '#d97706';
             ctx.beginPath();
             ctx.ellipse(2, 2, 18, 15, 0, 0, Math.PI * 2);
             ctx.fill();
-            // 身体主体
             ctx.fillStyle = '#fbbf24';
             ctx.beginPath();
             ctx.ellipse(0, 0, 17, 14, 0, 0, Math.PI * 2);
             ctx.fill();
-            // 身体高光
             ctx.fillStyle = '#fcd34d';
             ctx.beginPath();
             ctx.ellipse(-3, -4, 10, 7, -0.3, 0, Math.PI * 2);
             ctx.fill();
 
-            // 翅膀
             ctx.fillStyle = '#f59e0b';
             ctx.beginPath();
             ctx.ellipse(-6, wingY + 4, 10, 6, -0.2, 0, Math.PI * 2);
@@ -193,23 +362,19 @@
             ctx.ellipse(-7, wingY + 2, 5, 3, -0.2, 0, Math.PI * 2);
             ctx.fill();
 
-            // 眼白
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(8, -3, 7, 0, Math.PI * 2);
             ctx.fill();
-            // 瞳孔
             ctx.fillStyle = '#1a1a2e';
             ctx.beginPath();
             ctx.arc(10, -2, 4, 0, Math.PI * 2);
             ctx.fill();
-            // 眼神高光
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(11, -4, 1.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // 嘴巴
             ctx.fillStyle = '#ea580c';
             ctx.beginPath();
             ctx.moveTo(14, 1);
@@ -225,7 +390,6 @@
             ctx.closePath();
             ctx.fill();
 
-            // 肚子
             ctx.fillStyle = '#fde68a';
             ctx.beginPath();
             ctx.ellipse(4, 6, 8, 5, 0.2, 0, Math.PI * 2);
@@ -234,46 +398,38 @@
             ctx.restore();
         }
 
-        // 绘制原版风格管道
+        // 绘制塔（替代原版管道）
         function drawPipe(pipe) {
-            const capH = 26;
-            const capOverhang = 6;
+            const useImg = towerImg.complete && towerImg.naturalWidth > 0;
 
-            // 上管道主体
-            const grad1 = ctx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_W, 0);
-            grad1.addColorStop(0, '#22c55e');
-            grad1.addColorStop(0.3, '#4ade80');
-            grad1.addColorStop(0.7, '#4ade80');
-            grad1.addColorStop(1, '#16a34a');
-            ctx.fillStyle = grad1;
-            ctx.fillRect(pipe.x, 0, PIPE_W, pipe.topH - capH);
+            if (useImg) {
+                const imgH = towerImg.naturalHeight;
+                const imgW = towerImg.naturalWidth;
 
-            // 上管道帽檐
-            const grad1Cap = ctx.createLinearGradient(pipe.x - capOverhang, 0, pipe.x + PIPE_W + capOverhang, 0);
-            grad1Cap.addColorStop(0, '#16a34a');
-            grad1Cap.addColorStop(0.2, '#22c55e');
-            grad1Cap.addColorStop(0.5, '#4ade80');
-            grad1Cap.addColorStop(0.8, '#22c55e');
-            grad1Cap.addColorStop(1, '#16a34a');
-            ctx.fillStyle = grad1Cap;
-            ctx.fillRect(pipe.x - capOverhang, pipe.topH - capH, PIPE_W + capOverhang * 2, capH);
-            ctx.fillStyle = '#86efac';
-            ctx.fillRect(pipe.x - capOverhang + 3, pipe.topH - capH + 3, PIPE_W + capOverhang * 2 - 6, 4);
-            ctx.fillStyle = '#15803d';
-            ctx.fillRect(pipe.x + PIPE_W - 6, 0, 6, pipe.topH - capH);
-            ctx.fillRect(pipe.x + PIPE_W + capOverhang - 6, pipe.topH - capH, 6, capH);
+                // --- 上方塔（图片上下翻转） ---
+                const bodyH = pipe.topH;
+                if (bodyH > 0) {
+                    ctx.save();
+                    ctx.translate(0, bodyH);
+                    ctx.scale(1, -1);
+                    ctx.drawImage(towerImg, pipe.x, 0, PIPE_W, bodyH);
+                    ctx.restore();
+                }
 
-            // 下管道
-            const bottomY = pipe.topH + PIPE_GAP;
-            ctx.fillStyle = grad1;
-            ctx.fillRect(pipe.x, bottomY + capH, PIPE_W, canvas.height - bottomY - capH - 60);
-            ctx.fillStyle = grad1Cap;
-            ctx.fillRect(pipe.x - capOverhang, bottomY, PIPE_W + capOverhang * 2, capH);
-            ctx.fillStyle = '#86efac';
-            ctx.fillRect(pipe.x - capOverhang + 3, bottomY + 3, PIPE_W + capOverhang * 2 - 6, 4);
-            ctx.fillStyle = '#15803d';
-            ctx.fillRect(pipe.x + PIPE_W - 6, bottomY + capH, 6, canvas.height - bottomY - capH - 60);
-            ctx.fillRect(pipe.x + PIPE_W + capOverhang - 6, bottomY, 6, capH);
+                // --- 下方塔（正常方向，直接拉长） ---
+                const bottomY = pipe.topH + PIPE_GAP;
+                const bodyH2 = canvas.height - bottomY - 60;
+                if (bodyH2 > 0) {
+                    ctx.drawImage(towerImg, pipe.x, bottomY, PIPE_W, bodyH2);
+                }
+            } else {
+                // 降级
+                ctx.fillStyle = '#6b7280';
+                ctx.fillRect(pipe.x, 0, PIPE_W, pipe.topH);
+                const bottomY = pipe.topH + PIPE_GAP;
+                ctx.fillStyle = '#6b7280';
+                ctx.fillRect(pipe.x, bottomY, PIPE_W, canvas.height - bottomY - 60);
+            }
         }
 
         function spawnPipe() {
@@ -291,10 +447,10 @@
             bird.y += bird.vy;
             bird.rotation = Math.min(Math.max(bird.vy * 0.05, -0.5), 1.2);
 
-            const r = 14;
+            const r = BIRD_RADIUS;
 
             if (bird.y < r) { bird.y = r; bird.vy = 0; }
-            if (bird.y > canvas.height - 60 - r) { endGame(); return; }
+            if (bird.y > canvas.height - 60 - r) { endGame(bird.x, canvas.height - 60); return; }
 
             pipeTimer++;
             if (pipeTimer >= PIPE_INTERVAL) { spawnPipe(); pipeTimer = 0; }
@@ -309,8 +465,14 @@
                 }
 
                 if (pipes[i].x < bird.x + r && pipes[i].x + PIPE_W > bird.x - r) {
-                    if (bird.y - r < pipes[i].topH) { endGame(); return; }
-                    if (bird.y + r > pipes[i].topH + PIPE_GAP) { endGame(); return; }
+                    if (bird.y - r < pipes[i].topH) {
+                        endGame(pipes[i].x + PIPE_W / 2, bird.y + r); // 撞上方塔
+                        return;
+                    }
+                    if (bird.y + r > pipes[i].topH + PIPE_GAP) {
+                        endGame(pipes[i].x + PIPE_W / 2, bird.y - r); // 撞下方塔
+                        return;
+                    }
                 }
 
                 if (pipes[i].x + PIPE_W < 0) { pipes.splice(i, 1); }
@@ -320,11 +482,9 @@
         function draw() {
             drawBg();
             pipes.forEach(p => drawPipe(p));
-            ctx.save();
-            ctx.translate(bird.x, bird.y);
-            const wingPhase = gameState === 'playing' ? frameCount * 0.3 : 0;
-            drawBirdShape(bird.rotation, wingPhase);
-            ctx.restore();
+
+            // 使用新的 drawBird 方法（支持自定义图片）
+            drawBird(bird.x, bird.y, bird.rotation);
 
             if (gameState === 'playing') {
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -337,7 +497,20 @@
         function gameLoop() {
             update();
             draw();
-            if (gameState !== 'over') { animId = requestAnimationFrame(gameLoop); }
+
+            // 爆炸期间继续渲染粒子动画
+            if (gameState === 'over') {
+                if (particles.length > 0) {
+                    updateParticles();
+                }
+                drawBg();
+                pipes.forEach(p => drawPipe(p));
+                drawParticles();
+                drawOverUI();
+                animId = requestAnimationFrame(gameLoop);
+            } else {
+                animId = requestAnimationFrame(gameLoop);
+            }
         }
 
         function startGame() {
@@ -347,38 +520,48 @@
             gameLoop();
         }
 
-        function endGame() {
+        function endGame(hitX, hitY) {
             gameState = 'over';
+
+            // 💥 在碰撞点触发大爆炸（塔的位置）
+            createExplosion(hitX || bird.x, hitY || bird.y);
+            // 💥 在飞机位置也触发一个小爆炸
+            createExplosion(bird.x, bird.y);
+
             if (score > best) {
                 best = score;
                 localStorage.setItem('flappyBest', best);
                 bestDisplay.textContent = `👑 ${best}`;
             }
 
-            setTimeout(() => {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // 立刻显示结束画面
+            drawOverUI();
+        }
 
-                ctx.fillStyle = '#f87171';
-                ctx.font = 'bold 28px Microsoft YaHei';
-                ctx.textAlign = 'center';
-                ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2 - 60);
+        // 绘制游戏结束界面（可被爆炸动画循环重复调用）
+        function drawOverUI() {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                ctx.fillStyle = '#4ade80';
-                ctx.font = '22px Microsoft YaHei';
-                ctx.fillText(`得分：${score}`, canvas.width / 2, canvas.height / 2 - 15);
+            ctx.fillStyle = '#f87171';
+            ctx.font = 'bold 28px Microsoft YaHei';
+            ctx.textAlign = 'center';
+            ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2 - 60);
 
-                if (score >= best && score > 0) {
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.font = '16px Microsoft YaHei';
-                    ctx.fillText('🎉 打破纪录！', canvas.width / 2, canvas.height / 2 + 20);
-                }
+            ctx.fillStyle = '#4ade80';
+            ctx.font = '22px Microsoft YaHei';
+            ctx.fillText(`得分：${score}`, canvas.width / 2, canvas.height / 2 - 15);
 
-                roundRect(canvas.width / 2 - 55, canvas.height / 2 + 45, 110, 42, 10, '#4ade80');
-                ctx.fillStyle = '#1a1a2e';
-                ctx.font = 'bold 15px Microsoft YaHei';
-                ctx.fillText('再来一局', canvas.width / 2, canvas.height / 2 + 73);
-            }, 200);
+            if (score >= best && score > 0) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = '16px Microsoft YaHei';
+                ctx.fillText('🎉 打破纪录！', canvas.width / 2, canvas.height / 2 + 20);
+            }
+
+            roundRect(canvas.width / 2 - 55, canvas.height / 2 + 45, 110, 42, 10, '#4ade80');
+            ctx.fillStyle = '#1a1a2e';
+            ctx.font = 'bold 15px Microsoft YaHei';
+            ctx.fillText('再来一局', canvas.width / 2, canvas.height / 2 + 73);
         }
 
         function roundRect(x, y, w, h, r, color) {
@@ -431,8 +614,15 @@
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' || e.code === 'ArrowUp') {
                 e.preventDefault();
-                if (gameState === 'ready') startGame();
-                if (gameState === 'playing') flap();
+                if (gameState === 'over') {
+                    cancelAnimationFrame(animId);
+                    init();
+                    startGame();
+                } else if (gameState === 'ready') {
+                    startGame();
+                } else if (gameState === 'playing') {
+                    flap();
+                }
             }
         });
 
