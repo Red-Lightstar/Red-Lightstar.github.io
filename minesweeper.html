@@ -88,7 +88,7 @@
             width: 26px;
             height: 26px;
             background: #2a2a4a;
-            border: 1px solid #22224a;
+            border: 1px solid #1e1e3e;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -182,7 +182,7 @@
             large:  { rows: 16, cols: 30, mines: 99,  label: '大' }
         };
 
-        const STORAGE_KEY = 'minesweeper_save';
+        function getStorageKey() { return 'minesweeper_save_' + currentMode; }
         let ROWS, COLS, MINES;
         let board = [], revealed = [], flagged = [], questions = [], mineSet = new Set();
         let gameOver = false, gameWon = false, timerInterval = null, seconds = 0, timerStarted = false;
@@ -200,16 +200,15 @@
         const restartBtn2 = document.getElementById('restartBtn2');
         const modeBtns = document.querySelectorAll('.modeBtn');
 
+        // 获取当前模式对应的存档 key
+        function getStorageKey() {
+            return `minesweeper_save_${currentMode}`;
+        }
+
         function setCellSize() {
             const mode = MODES[currentMode];
-            // 根据模式自适应格子大小和间距
-            if (mode.cols >= 30) {
-                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 26px)`;
-            } else if (mode.cols >= 16) {
-                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 32px)`;
-            } else {
-                boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 38px)`;
-            }
+            // 统一格子大小为 26px，避免分散感
+            boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 26px)`;
         }
 
         function saveGame() {
@@ -219,11 +218,11 @@
                 seconds: seconds, timerStarted: timerStarted,
                 gameOver: gameOver, gameWon: gameWon, currentMode: currentMode
             };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+            localStorage.setItem(getStorageKey(), JSON.stringify(saveData));
         }
 
         function loadGame() {
-            const saved = localStorage.getItem(STORAGE_KEY);
+            const saved = localStorage.getItem(getStorageKey());
             if (!saved) return false;
             try {
                 const data = JSON.parse(saved);
@@ -251,7 +250,7 @@
         }
 
         function initGame(clearSave = true) {
-            if (clearSave) localStorage.removeItem(STORAGE_KEY);
+            if (clearSave) localStorage.removeItem(getStorageKey());
             gameOver = false; gameWon = false;
             seconds = 0; flagCount = 0; timerStarted = false;
             clearInterval(timerInterval);
@@ -353,7 +352,7 @@
 
         function endGame(won) {
             gameOver = true; clearInterval(timerInterval);
-            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(getStorageKey());
             if (won) {
                 gameWon = true; overlayIcon.textContent = '🏆';
                 overlayText.textContent = '恭喜通关！';
@@ -429,9 +428,27 @@
         modeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.dataset.mode === currentMode) return;
+                // 先保存当前模式
+                if (!gameOver && timerStarted) saveGame();
+                clearInterval(timerInterval);
+                // 切换到新模式
                 currentMode = btn.dataset.mode;
                 updateModeButtons();
-                initGame(true);
+                // 加载新模式的存档或初始化
+                if (!loadGame()) {
+                    ROWS = MODES[currentMode].rows;
+                    COLS = MODES[currentMode].cols;
+                    MINES = MODES[currentMode].mines;
+                    setCellSize();
+                    initGame();
+                } else {
+                    setCellSize();
+                    renderBoard();
+                    updateMineCount();
+                    timerEl.textContent = `⏱ ${seconds}`;
+                    if (timerStarted && !gameOver) startTimer();
+                    if (gameOver) setTimeout(() => overlay.classList.add('show'), 300);
+                }
             });
         });
 
