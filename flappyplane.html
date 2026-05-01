@@ -14,8 +14,6 @@
             align-items: center;
             padding: 20px;
         }
-
-        /* 顶部 */
         #header {
             display: flex;
             justify-content: space-between;
@@ -28,11 +26,14 @@
         #backBtn {
             background: #4a4a6a; color: #fff; border: none;
             padding: 7px 18px; border-radius: 6px; cursor: pointer; font-size: 13px;
-            text-decoration: none; transition: background 0.2s;
+            text-decoration: none;
         }
-        #backBtn:hover { background: #6b6b8a; }
-
-        /* 信息栏 */
+        canvas {
+            border: 2px solid #3a3a5a;
+            border-radius: 10px;
+            display: block;
+            cursor: pointer;
+        }
         #infoBar {
             display: flex;
             justify-content: center;
@@ -52,382 +53,225 @@
             text-align: center;
         }
         #bestDisplay { color: #fbbf24; }
-
-        /* Canvas */
-        canvas {
-            border: 2px solid #3a3a5a;
-            border-radius: 10px;
-            display: block;
-            cursor: pointer;
-        }
-
-        /* 提示 */
         #hint {
-            color: #555;
+            color: #888;
             font-size: 12px;
             margin-top: 10px;
             text-align: center;
         }
-        #hint span { color: #888; }
     </style>
 </head>
 <body>
-
     <div id="header">
         <a href="index.html" id="title">← 游戏中心</a>
         <a href="index.html" id="backBtn">返回主页</a>
     </div>
-
     <div id="infoBar">
         <div id="scoreDisplay">🏆 0</div>
         <div id="bestDisplay">👑 0</div>
     </div>
-
     <canvas id="gameCanvas" width="400" height="560"></canvas>
-
     <div id="hint">
-        <span>点击</span> 或 <span>空格键</span> 让飞机飞起来，不要撞上哦！
+        <span>点击</span> 或 <span>空格键</span> 让飞机飞起来
     </div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('scoreDisplay');
-        const bestDisplay = document.getElementById('bestDisplay');
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const bestDisplay = document.getElementById('bestDisplay');
 
-        const GRAVITY = 0.3;
-        const FLAP = -6.5;
-        const PIPE_W = 60;
-        const PIPE_GAP = 165;
-        const PIPE_SPEED = 2.5;
-        const PIPE_INTERVAL = 110;
+const GRAVITY = 0.3;
+const FLAP = -6.5;
+const PIPE_GAP = 165;
+const PIPE_SPEED = 2.5;
+const PIPE_INTERVAL = 110;
 
-        // =============================================
-        //  ✈️ 飞机图片配置（重点修复！）
-        // =============================================
-        const PLANE_IMG_SRC = '飞机_clean.png'; 
-        const PLANE_WIDTH   = 50;   // 显示宽度，调大让飞机更明显
-        const PLANE_HEIGHT  = 30;   // 显示高度，和宽度保持比例
-        const BIRD_RADIUS   = 16;   // 碰撞检测半径（和飞机大小匹配）
-        // =============================================
+// 图片配置
+const PLANE_IMG_SRC = '飞机_clean.png';
+const TOWER_IMG_SRC = '塔_nobg.png';
 
-        // 预加载飞机图片
-        const planeImg = new Image();
-        planeImg.onerror = function() {
-            console.warn('飞机图片加载失败！请检查文件是否存在：' + PLANE_IMG_SRC);
-        };
-        planeImg.onload = function() {
-            console.log('飞机图片加载成功！尺寸：' + this.naturalWidth + 'x' + this.naturalHeight);
-        };
-        planeImg.src = PLANE_IMG_SRC + '?t=' + Date.now();
+// 飞机大小
+const PLANE_W = 50;
+const PLANE_H = 30;
+const BIRD_RADIUS = 18;
 
-        // =============================================
-        //  🏢 管道（塔）图片配置（可选）
-        // =============================================
-        const TOWER_IMG_SRC = '塔_nobg.png';
-        const TOWER_WIDTH   = 70;
-        const TOWER_CAP_W   = 82;
-        const TOWER_CAP_H   = 30;
-        // =============================================
+// 塔大小
+const TOWER_W = 60;
 
-        const towerImg = new Image();
-        towerImg.onerror = function() {
-            console.warn('塔图片加载失败！请检查文件是否存在：' + TOWER_IMG_SRC);
-        };
-        towerImg.src = TOWER_IMG_SRC + '?t=' + Date.now();
+// 加载图片
+const planeImg = new Image();
+const towerImg = new Image();
+planeImg.src = PLANE_IMG_SRC;
+towerImg.src = TOWER_IMG_SRC;
 
-        let bird, pipes, score, best, gameState, pipeTimer, animId;
-        let frameCount = 0;
-        let startPlaneFloat = 0;
-        let particles = [];
+let bird, pipes, score, best, gameState;
+let frameCount = 0;
+let startFloat = 0;
+let animId;
 
-        const GAME_STATE = {
-            READY: 'ready',
-            PLAYING: 'playing',
-            GAME_OVER: 'gameOver'
-        };
+const GAME_STATE = {
+    READY: 'ready',
+    PLAYING: 'playing',
+    GAME_OVER: 'gameOver'
+};
 
-        // 初始化游戏
-        function init() {
-            bird = { x: 70, y: canvas.height / 2, vy: 0, rotation: 0 };
-            pipes = [];
-            score = 0;
-            gameState = GAME_STATE.READY;
-            scoreDisplay.textContent = `🏆 ${score}`;
-            frameCount = 0;
-            particles = [];
-            cancelAnimationFrame(animId);
-            draw();
-            if (!animId) {
-                loop();
-            }
-        }
+best = +localStorage.getItem('flappyBest') || 0;
+bestDisplay.textContent = `👑 ${best}`;
 
-        // 待机界面飞机绘制（带浮动动画）
-        function drawStartPlane() {
-            ctx.save();
-            startPlaneFloat += 0.05;
-            const floatY = Math.sin(startPlaneFloat) * 8;
-            
-            // 修复1：直接以bird坐标为中心绘制，不再偏移
-            const drawX = bird.x;
-            const drawY = bird.y + floatY;
+function init() {
+    bird = { x: 70, y: canvas.height / 2, vy: 0, rot: 0 };
+    pipes = [];
+    score = 0;
+    frameCount = 0;
+    gameState = GAME_STATE.READY;
+    scoreDisplay.textContent = `🏆 0`;
+    cancelAnimationFrame(animId);
+    loop();
+}
 
-            if (planeImg.complete && !planeImg.error) {
-                // 修复2：以图片中心为原点绘制，居中对齐
-                ctx.drawImage(
-                    planeImg,
-                    drawX - PLANE_WIDTH / 2, drawY - PLANE_HEIGHT / 2,
-                    PLANE_WIDTH, PLANE_HEIGHT
-                );
-            } else {
-                // 降级方案：绘制默认小鸟
-                ctx.fillStyle = '#4ade80';
-                ctx.beginPath();
-                ctx.arc(bird.x, bird.y + floatY, BIRD_RADIUS, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#1a1a2e';
-                ctx.beginPath();
-                ctx.arc(bird.x - 6, bird.y + floatY - 3, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
+// 待机界面 只画飞机图片
+function drawReadyPlane() {
+    startFloat += 0.06;
+    let fy = Math.sin(startFloat) * 6;
+    let x = bird.x - PLANE_W/2;
+    let y = bird.y + fy - PLANE_H/2;
+    ctx.drawImage(planeImg, x, y, PLANE_W, PLANE_H);
+}
 
-        // 游戏中飞机绘制
-        function drawPlayingPlane() {
-            ctx.save();
-            // 修复3：旋转以飞机中心为原点
-            ctx.translate(bird.x, bird.y);
-            ctx.rotate(bird.rotation * Math.PI / 180);
+// 游戏中 飞机图片+旋转
+function drawPlane() {
+    ctx.save();
+    ctx.translate(bird.x, bird.y);
+    ctx.rotate(bird.rot * Math.PI / 180);
+    ctx.drawImage(planeImg, -PLANE_W/2, -PLANE_H/2, PLANE_W, PLANE_H);
+    ctx.restore();
+}
 
-            if (planeImg.complete && !planeImg.error) {
-                // 修复4：以图片中心为原点绘制
-                ctx.drawImage(
-                    planeImg,
-                    -PLANE_WIDTH / 2, -PLANE_HEIGHT / 2,
-                    PLANE_WIDTH, PLANE_HEIGHT
-                );
-            } else {
-                ctx.fillStyle = '#4ade80';
-                ctx.beginPath();
-                ctx.arc(0, 0, BIRD_RADIUS, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#1a1a2e';
-                ctx.beginPath();
-                ctx.arc(-6, -3, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
+// 画塔（上下管道都用塔图片）
+function drawPipes() {
+    for(let p of pipes){
+        // 上塔
+        ctx.drawImage(towerImg, p.x, 0, TOWER_W, p.topH);
+        // 下塔
+        ctx.drawImage(towerImg, p.x, p.bottomY, TOWER_W, canvas.height - p.bottomY);
+    }
+}
 
-        // 绘制管道
-        function drawPipes() {
-            ctx.fillStyle = '#4ade80';
-            for (const pipe of pipes) {
-                // 上管道
-                ctx.fillRect(pipe.x, 0, PIPE_W, pipe.topHeight);
-                // 下管道
-                ctx.fillRect(pipe.x, pipe.bottomY, PIPE_W, canvas.height - pipe.bottomY);
-            }
-        }
+function draw() {
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-        // 绘制粒子（游戏结束效果）
-        function drawParticles() {
-            for (const p of particles) {
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, p.life);
-                ctx.fillStyle = `rgba(255, 100, 50, ${p.life})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
-        }
+    if(gameState === GAME_STATE.READY){
+        drawReadyPlane();
+        ctx.fillStyle = '#fff';
+        ctx.font = '18px Microsoft YaHei';
+        ctx.textAlign = 'center';
+        ctx.fillText('点击开始游戏', canvas.width/2, canvas.height/2 + 100);
+    }else if(gameState === GAME_STATE.PLAYING){
+        drawPipes();
+        drawPlane();
+    }else if(gameState === GAME_STATE.GAME_OVER){
+        drawPipes();
+        drawPlane();
+        ctx.fillStyle = '#ff5555';
+        ctx.font = '24px Microsoft YaHei';
+        ctx.textAlign = 'center';
+        ctx.fillText('游戏结束', canvas.width/2, canvas.height/2 - 40);
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px Microsoft YaHei';
+        ctx.fillText('点击重新开始', canvas.width/2, canvas.height/2);
+    }
+}
 
-        // 更新粒子
-        function updateParticles() {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= p.decay;
-                if (p.life <= 0) {
-                    particles.splice(i, 1);
-                }
-            }
-        }
+function update() {
+    if(gameState !== GAME_STATE.PLAYING) return;
+    frameCount++;
 
-        // 创建爆炸粒子
-        function createExplosion(x, y) {
-            for (let i = 0; i < 12; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 1 + Math.random() * 2;
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    radius: 3 + Math.random() * 4,
-                    life: 1.0,
-                    decay: 0.03 + Math.random() * 0.02
-                });
-            }
-        }
+    bird.vy += GRAVITY;
+    bird.y += bird.vy;
+    bird.rot = Math.min(80, bird.vy * 2.5);
 
-        // 碰撞检测
-        function collide(rect1, rect2) {
-            return rect1.x < rect2.x + rect2.width &&
-                   rect1.x + rect1.width > rect2.x &&
-                   rect1.y < rect2.y + rect2.height &&
-                   rect1.y + rect1.height > rect2.y;
-        }
-
-        // 绘制主函数
-        function draw() {
-            ctx.fillStyle = '#1a1a2e';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            if (gameState === GAME_STATE.READY) {
-                drawStartPlane();
-                ctx.fillStyle = '#fff';
-                ctx.font = '18px Microsoft YaHei';
-                ctx.textAlign = 'center';
-                ctx.fillText('点击屏幕开始游戏', canvas.width / 2, canvas.height / 2 + 100);
-            } else if (gameState === GAME_STATE.PLAYING) {
-                drawPlayingPlane();
-                drawPipes();
-            } else if (gameState === GAME_STATE.GAME_OVER) {
-                drawPlayingPlane();
-                drawPipes();
-                drawParticles();
-                ctx.fillStyle = '#ff4444';
-                ctx.font = '24px Microsoft YaHei';
-                ctx.textAlign = 'center';
-                ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2 - 50);
-                ctx.fillStyle = '#fff';
-                ctx.font = '16px Microsoft YaHei';
-                ctx.fillText('点击屏幕重新开始', canvas.width / 2, canvas.height / 2);
-            }
-        }
-
-        // 更新游戏逻辑
-        function update() {
-            if (gameState !== GAME_STATE.PLAYING) return;
-
-            frameCount++;
-            bird.vy += GRAVITY;
-            // 限制下落速度，防止飞出屏幕
-            if (bird.vy > 10) bird.vy = 10;
-            bird.y += bird.vy;
-            bird.rotation = Math.min(90, bird.vy * 3);
-
-            // 生成管道
-            if (frameCount % PIPE_INTERVAL === 0) {
-                const topPipeHeight = Math.random() * (canvas.height - PIPE_GAP - 100) + 20;
-                pipes.push({
-                    x: canvas.width,
-                    topHeight: topPipeHeight,
-                    bottomY: topPipeHeight + PIPE_GAP,
-                    scored: false
-                });
-            }
-
-            // 移动管道并计分
-            for (let i = pipes.length - 1; i >= 0; i--) {
-                const pipe = pipes[i];
-                pipe.x -= PIPE_SPEED;
-
-                if (pipe.x < -PIPE_W) {
-                    pipes.splice(i, 1);
-                    continue;
-                }
-
-                if (!pipe.scored && pipe.x + PIPE_W < bird.x) {
-                    pipe.scored = true;
-                    score++;
-                    scoreDisplay.textContent = `🏆 ${score}`;
-                    if (score > best) {
-                        best = score;
-                        localStorage.setItem('flappyBest', best);
-                        bestDisplay.textContent = `👑 ${best}`;
-                    }
-                }
-
-                // 碰撞检测（和飞机大小匹配）
-                const birdRect = {
-                    x: bird.x - BIRD_RADIUS,
-                    y: bird.y - BIRD_RADIUS,
-                    width: BIRD_RADIUS * 2,
-                    height: BIRD_RADIUS * 2
-                };
-                const pipeTopRect = {
-                    x: pipe.x,
-                    y: 0,
-                    width: PIPE_W,
-                    height: pipe.topHeight
-                };
-                const pipeBottomRect = {
-                    x: pipe.x,
-                    y: pipe.bottomY,
-                    width: PIPE_W,
-                    height: canvas.height - pipe.bottomY
-                };
-
-                if (
-                    bird.y - BIRD_RADIUS < 0 || 
-                    bird.y + BIRD_RADIUS > canvas.height ||
-                    collide(birdRect, pipeTopRect) || 
-                    collide(birdRect, pipeBottomRect)
-                ) {
-                    gameOver();
-                    return;
-                }
-            }
-        }
-
-        // 游戏结束
-        function gameOver() {
-            gameState = GAME_STATE.GAME_OVER;
-            createExplosion(bird.x, bird.y);
-        }
-
-        // 主循环（只执行一次）
-        function loop() {
-            update();
-            draw();
-            if (gameState === GAME_STATE.GAME_OVER) {
-                updateParticles();
-            }
-            animId = requestAnimationFrame(loop);
-        }
-
-        // 点击/空格触发
-        function flap() {
-            if (gameState === GAME_STATE.READY) {
-                gameState = GAME_STATE.PLAYING;
-            } else if (gameState === GAME_STATE.PLAYING) {
-                bird.vy = FLAP;
-                bird.rotation = -20;
-            } else if (gameState === GAME_STATE.GAME_OVER) {
-                init();
-            }
-        }
-
-        canvas.addEventListener('click', flap);
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                flap();
-            }
+    // 生成塔
+    if(frameCount % PIPE_INTERVAL === 0){
+        let topH = Math.random() * (canvas.height - PIPE_GAP - 120) + 30;
+        pipes.push({
+            x: canvas.width,
+            topH: topH,
+            bottomY: topH + PIPE_GAP,
+            scored: false
         });
+    }
 
-        // 加载最高分
-        best = +localStorage.getItem('flappyBest') || 0;
-        bestDisplay.textContent = `👑 ${best}`;
+    // 移动塔
+    for(let i = pipes.length - 1; i >= 0; i--){
+        let p = pipes[i];
+        p.x -= PIPE_SPEED;
+        if(p.x < -TOWER_W){
+            pipes.splice(i,1);
+            continue;
+        }
 
-        // 启动游戏
+        // 计分
+        if(!p.scored && p.x + TOWER_W < bird.x){
+            p.scored = true;
+            score++;
+            scoreDisplay.textContent = `🏆 ${score}`;
+            if(score > best){
+                best = score;
+                localStorage.setItem('flappyBest', best);
+                bestDisplay.textContent = `👑 ${best}`;
+            }
+        }
+
+        // 碰撞
+        let bx = bird.x - BIRD_RADIUS;
+        let by = bird.y - BIRD_RADIUS;
+        let bw = BIRD_RADIUS * 2;
+        let bh = BIRD_RADIUS * 2;
+
+        if(
+            bird.y - BIRD_RADIUS < 0 ||
+            bird.y + BIRD_RADIUS > canvas.height ||
+            (bx < p.x + TOWER_W && bx + bw > p.x && by < p.topH) ||
+            (bx < p.x + TOWER_W && bx + bw > p.x && by + bh > p.bottomY)
+        ){
+            gameOver();
+            return;
+        }
+    }
+}
+
+function gameOver(){
+    gameState = GAME_STATE.GAME_OVER;
+}
+
+function loop() {
+    update();
+    draw();
+    animId = requestAnimationFrame(loop);
+}
+
+function flap(){
+    if(gameState === GAME_STATE.READY){
+        gameState = GAME_STATE.PLAYING;
+    }else if(gameState === GAME_STATE.PLAYING){
+        bird.vy = FLAP;
+        bird.rot = -20;
+    }else if(gameState === GAME_STATE.GAME_OVER){
         init();
-    </script>
+    }
+}
+
+canvas.addEventListener('click', flap);
+document.addEventListener('keydown', e=>{
+    if(e.code === 'Space'){
+        e.preventDefault();
+        flap();
+    }
+});
+
+init();
+</script>
 </body>
 </html>
