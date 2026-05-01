@@ -5,225 +5,170 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>游戏中心</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* 全局基础样式（简化版） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+        }
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             min-height: 100vh;
             padding: 20px;
+            color: #fff;
         }
 
-        /* 左上角更新日志 */
+        /* 1. 更新日志模块（后续加日志只改这里） */
         #logToggle {
             position: fixed;
             top: 20px;
-            left: 24px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            left: 20px;
             background: rgba(255,255,255,0.08);
-            border: 1.5px solid #4a4a6a;
+            border: 1px solid #4a4a6a;
             border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
             color: #888;
             font-size: 13px;
-            padding: 8px 14px;
-            cursor: pointer;
-            transition: all 0.25s;
-            font-family: inherit;
         }
-        #logToggle:hover {
-            border-color: #4ade80;
-            color: #4ade80;
-        }
-        #logToggle .arrow {
-            transition: transform 0.2s;
-            font-size: 10px;
-        }
-        #logToggle.open .arrow { transform: rotate(90deg); }
-
         #logPanel {
             position: fixed;
-            top: 67px;
-            left: 24px;
-            display: none;
+            top: 60px;
+            left: 20px;
             background: #1e1e38;
             border: 1px solid #3a3a5a;
-            border-radius: 12px;
-            padding: 16px 0 16px 18px;
+            border-radius: 10px;
+            padding: 15px;
             width: 280px;
-            max-height: 240px;
-            overflow: hidden;
-            z-index: 200;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        }
-        #logPanel.show { display: block; }
-        #logScroll {
-            max-height: 208px;
+            max-height: 250px;
             overflow-y: auto;
-            padding-right: 14px;
+            display: none; /* 默认隐藏 */
         }
-        #logScroll::-webkit-scrollbar { width: 6px; }
-        #logScroll::-webkit-scrollbar-track { background: transparent; }
-        #logScroll::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 3px; }
-        #logScroll::-webkit-scrollbar-thumb:hover { background: #5a5a7a; }
-        .log-item { margin-bottom: 14px; }
-        .log-item:last-child { margin-bottom: 0; }
-        .log-date { color: #4ade80; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-        .log-text { color: #aaa; font-size: 13px; line-height: 1.5; }
+        .log-item {
+            margin-bottom: 10px; /* 日志项间距 */
+        }
+        .log-date {
+            color: #4ade80; /* 日期高亮色 */
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .log-text {
+            color: #aaa;
+            font-size: 13px;
+            line-height: 1.4;
+        }
 
-        /* 右上角反馈按钮 */
+        /* 2. 反馈按钮模块 */
         #feedbackBtn {
             position: fixed;
             top: 20px;
-            right: 24px;
+            right: 20px;
             background: rgba(255,255,255,0.08);
-            border: 1.5px solid #4a4a6a;
+            border: 1px solid #4a4a6a;
             border-radius: 50%;
-            width: 46px;
-            height: 46px;
+            width: 45px;
+            height: 45px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            font-size: 22px;
             color: #a0a0c0;
-            transition: all 0.25s ease;
-            z-index: 100;
             text-decoration: none;
+            font-size: 20px;
         }
-        #feedbackBtn:hover {
-            border-color: #4ade80;
-            color: #4ade80;
-            background: rgba(74,222,128,0.1);
-            box-shadow: 0 0 14px rgba(74,222,128,0.3);
-        }
-        #feedbackBtn .tooltip {
-            position: absolute;
-            top: 52px;
-            right: 0;
-            background: #23233a;
-            color: #ccc;
-            font-size: 12px;
-            padding: 4px 10px;
-            border-radius: 5px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-        }
-        #feedbackBtn:hover .tooltip { opacity: 1; }
 
-        /* 主体 */
-        .container { text-align: center; padding-top: 40px; }
+        /* 3. 游戏中心主体模块 */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            padding-top: 60px;
+        }
         h1 {
             color: #4ade80;
-            font-size: 48px;
+            font-size: 40px;
             margin-bottom: 10px;
-            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
         }
-        .subtitle { color: #888; font-size: 18px; margin-bottom: 40px; }
-
+        .subtitle {
+            color: #888;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        /* 游戏卡片容器（自动换行） */
         .games {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 24px;
-            max-width: 720px;
+            gap: 20px;
         }
+        /* 游戏卡片样式（统一风格） */
         .game-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255,255,255,0.05);
             border: 2px solid #4a4a6a;
-            border-radius: 20px;
-            padding: 36px 40px;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            border-radius: 15px;
+            padding: 30px;
             text-decoration: none;
-            min-width: 200px;
+            color: #fff;
+            min-width: 180px;
+            transition: all 0.2s ease;
         }
         .game-card:hover {
             border-color: #4ade80;
-            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
-            transform: translateY(-5px);
+            transform: translateY(-3px);
         }
-        .game-icon { font-size: 72px; }
-        .game-title { color: #fff; font-size: 22px; font-weight: bold; }
-        .game-desc { color: #888; font-size: 13px; }
+        .game-icon {
+            font-size: 60px;
+            margin-bottom: 8px;
+        }
+        .game-title {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .game-desc {
+            color: #888;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-
-    <!-- 左上角更新日志 -->
-    <button id="logToggle">
-        <span class="arrow">▶</span> 📋 更新日志
-    </button>
+    <!-- ====== 更新日志模块（重点：后续加日志只加在logPanel里） ====== -->
+    <button id="logToggle">📋 更新日志</button>
     <div id="logPanel">
-        <div id="logScroll">
-            <div class="log-item">
-            <div class="log-item">
-                <div class="log-date">2026-04-18</div>
-                <div class="log-text">修复扫雷间隔问题</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-12</div>
-                <div class="log-text">扫雷有了三个模式</div>
-            </div>
-             <div class="log-item">
-                <div class="log-date">2026-04-12</div>
-                <div class="log-text">Flappy Bird改成Flappy Plane</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-11</div>
-                <div class="log-text">留言有了服务器</div>
-            </div>
-                <div class="log-date">2026-04-01</div>
-                <div class="log-text">Flappy Bird 游戏登场</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-01</div>
-                <div class="log-text">扫雷游戏新增保存功能</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-01</div>
-                <div class="log-text">扫雷游戏登场</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-04-01</div>
-                <div class="log-text">新增留言反馈页面</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-03-31</div>
-                <div class="log-text">修复了贪吃蛇速度太快的Bug</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-03-31</div>
-                <div class="log-text">加了血量，加大了可移动范围</div>
-            </div>
-            <div class="log-item">
-                <div class="log-date">2026-03-31</div>
-                <div class="log-text">贪吃蛇游戏登场</div>
-            </div>
+        <!-- 【添加新日志的位置】：复制下面的.log-item块，改日期和内容即可 -->
+        <div class="log-item">
+            <div class="log-date">2026-04-18</div>
+            <div class="log-text">修复扫雷间隔问题</div>
         </div>
+        <div class="log-item">
+            <div class="log-date">2026-04-12</div>
+            <div class="log-text">扫雷新增三个难度模式</div>
+        </div>
+        <div class="log-item">
+            <div class="log-date">2026-04-12</div>
+            <div class="log-text">Flappy Bird 改版为 Flappy Plane</div>
+        </div>
+        <div class="log-item">
+            <div class="log-date">2026-04-01</div>
+            <div class="log-text">新增2048游戏入口</div>
+        </div>
+        <!-- 【示例：新增日志模板】
+        <div class="log-item">
+            <div class="log-date">YYYY-MM-DD</div>
+            <div class="log-text">这里写更新内容</div>
+        </div>
+        -->
     </div>
 
-    <!-- 右上角反馈按钮 -->
-    <a href="feedback.html" id="feedbackBtn" title="意见反馈">
-        💬
-        <span class="tooltip">意见反馈</span>
-    </a>
+    <!-- ====== 反馈按钮 ====== -->
+    <a href="feedback.html" id="feedbackBtn" title="意见反馈">💬</a>
 
-    <!-- 主体 -->
+    <!-- ====== 游戏中心主体 ====== -->
     <div class="container">
         <h1>🎮 游戏中心</h1>
         <p class="subtitle">选择游戏开始游玩</p>
 
         <div class="games">
+            <!-- 【添加新游戏的位置】：复制下面的.game-card块，改href/图标/标题/描述即可 -->
             <a href="snake.html" class="game-card">
                 <div class="game-icon">🐍</div>
                 <div class="game-title">贪吃蛇</div>
@@ -241,23 +186,38 @@
                 <div class="game-title">Flappy Plane</div>
                 <div class="game-desc">穿越双子塔，不要撞上哦</div>
             </a>
+
+            <a href="2048.html" class="game-card">
+                <div class="game-icon">🔢</div>
+                <div class="game-title">2048</div>
+                <div class="game-desc">合并数字，挑战2048</div>
+            </a>
+
+            <!-- 【示例：新增游戏模板】
+            <a href="新游戏.html" class="game-card">
+                <div class="game-icon">📌</div>
+                <div class="game-title">新游戏名称</div>
+                <div class="game-desc">新游戏描述</div>
+            </a>
+            -->
         </div>
     </div>
 
+    <!-- ====== 核心交互JS（简化版） ====== -->
     <script>
+        // 更新日志展开/收起逻辑
         const logToggle = document.getElementById('logToggle');
-        const logPanel  = document.getElementById('logPanel');
+        const logPanel = document.getElementById('logPanel');
+        
+        logToggle.onclick = () => {
+            // 切换显示/隐藏（用CSS display属性）
+            logPanel.style.display = logPanel.style.display === 'block' ? 'none' : 'block';
+        };
 
-        logToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            logToggle.classList.toggle('open');
-            logPanel.classList.toggle('show');
-        });
-
+        // 点击页面其他区域关闭日志面板
         document.addEventListener('click', (e) => {
-            if (!logPanel.contains(e.target) && e.target !== logToggle) {
-                logToggle.classList.remove('open');
-                logPanel.classList.remove('show');
+            if (e.target !== logToggle && !logPanel.contains(e.target)) {
+                logPanel.style.display = 'none';
             }
         });
     </script>
