@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 - Red-Lightstar的小游戏</title>
+    <style>
+        /* 全局样式统一 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        /* 分数显示 */
+        .score-panel {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        #score {
+            color: #f65e3b;
+            font-weight: bold;
+        }
+        /* 游戏容器 */
+        #game-container {
+            width: 400px;
+            height: 400px;
+            background-color: #bbada0;
+            border-radius: 8px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 15px;
+        }
+        /* 格子样式 */
+        .cell {
+            background-color: #cdc1b4;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: #776e65;
+        }
+        /* 不同数字的背景色 */
+        .cell-2 { background-color: #eee4da; }
+        .cell-4 { background-color: #ede0c8; }
+        .cell-8 { background-color: #f2b179; color: #f9f6f2; }
+        .cell-16 { background-color: #f59563; color: #f9f6f2; }
+        .cell-32 { background-color: #f67c5f; color: #f9f6f2; }
+        .cell-64 { background-color: #f65e3b; color: #f9f6f2; }
+        .cell-128 { background-color: #edcf72; color: #f9f6f2; font-size: 24px; }
+        .cell-256 { background-color: #edcc61; color: #f9f6f2; font-size: 24px; }
+        .cell-512 { background-color: #edc850; color: #f9f6f2; font-size: 24px; }
+        .cell-1024 { background-color: #edc53f; color: #f9f6f2; font-size: 20px; }
+        .cell-2048 { background-color: #edc22e; color: #f9f6f2; font-size: 20px; }
+        .cell-4096 { background-color: #3c3a32; color: #f9f6f2; font-size: 20px; }
+        /* 操作说明 */
+        .controls {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+        /* 按钮样式统一 */
+        .btn-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .back-btn, .restart-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+        }
+        .back-btn {
+            background-color: #4CAF50;
+        }
+        .back-btn:hover {
+            background-color: #45a049;
+        }
+        .restart-btn {
+            background-color: #2196F3;
+        }
+        .restart-btn:hover {
+            background-color: #1976D2;
+        }
+        /* 提示弹窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 20px;
+        }
+        .modal-btn {
+            margin-top: 20px;
+            padding: 8px 20px;
+            background-color: #f65e3b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>2048 小游戏</h1>
+    <div class="score-panel">当前分数：<span id="score">0</span></div>
+    <div id="game-container"></div>
+    <div class="controls">
+        操作说明：上下左右方向键控制数字移动，相同数字碰撞合并，达到2048即胜利！
+    </div>
+    <div class="btn-group">
+        <button class="restart-btn" onclick="restartGame()">重新开始</button>
+        <button class="back-btn" onclick="window.location.href='index.html'">返回游戏列表</button>
+    </div>
+
+    <!-- 胜利/失败弹窗 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <p id="modal-text"></p>
+            <button class="modal-btn" onclick="closeModal()">确定</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心变量
+        let board = []; // 4x4棋盘
+        let score = 0;
+        const gameContainer = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const modal = document.getElementById('modal');
+        const modalText = document.getElementById('modal-text');
+
+        // 初始化棋盘
+        function initBoard() {
+            board = Array(4).fill().map(() => Array(4).fill(0));
+            score = 0;
+            scoreElement.textContent = score;
+            // 初始生成2个随机数字
+            generateRandomNumber();
+            generateRandomNumber();
+            renderBoard();
+        }
+
+        // 生成随机数字（2或4，90%概率2，10%概率4）
+        function generateRandomNumber() {
+            // 找空位置
+            const emptyCells = [];
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (board[i][j] === 0) {
+                        emptyCells.push({ x: i, y: j });
+                    }
+                }
+            }
+            // 没有空位置则返回
+            if (emptyCells.length === 0) return;
+            // 随机选一个空位置
+            const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            // 随机生成2或4
+            board[randomCell.x][randomCell.y] = Math.random() < 0.9 ? 2 : 4;
+        }
+
+        // 渲染棋盘
+        function renderBoard() {
+            gameContainer.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (board[i][j] !== 0) {
+                        cell.classList.add(`cell-${board[i][j]}`);
+                        cell.textContent = board[i][j];
+                    }
+                    gameContainer.appendChild(cell);
+                }
+            }
+        }
+
+        // 处理行的移动（向左移动逻辑）
+        function processRow(row) {
+            // 1. 移除空值
+            let newRow = row.filter(num => num !== 0);
+            // 2. 合并相同数字
+            for (let i = 0; i < newRow.length - 1; i++) {
+                if (newRow[i] === newRow[i + 1]) {
+                    newRow[i] *= 2;
+                    newRow[i + 1] = 0;
+                    score += newRow[i]; // 更新分数
+                }
+            }
+            // 3. 再次移除空值，补0
+            newRow = newRow.filter(num => num !== 0);
+            while (newRow.length < 4) {
+                newRow.push(0);
+            }
+            return newRow;
+        }
+
+        // 向左移动
+        function moveLeft() {
+            let isChanged = false;
+            for (let i = 0; i < 4; i++) {
+                const originalRow = [...board[i]];
+                const newRow = processRow(originalRow);
+                if (JSON.stringify(originalRow) !== JSON.stringify(newRow)) {
+                    isChanged = true;
+                    board[i] = newRow;
+                }
+            }
+            if (isChanged) {
+                generateRandomNumber();
+                scoreElement.textContent = score;
+                checkGameStatus();
+            }
+        }
+
+        // 向右移动
+        function moveRight() {
+            let isChanged = false;
+            for (let i = 0; i < 4; i++) {
+                const originalRow = [...board[i]];
+                // 反转行，处理后再反转
+                const reversedRow = originalRow.reverse();
+                const newRow = processRow(reversedRow).reverse();
+                if (JSON.stringify(originalRow) !== JSON.stringify(newRow)) {
+                    isChanged = true;
+                    board[i] = newRow;
+                }
+            }
+            if (isChanged) {
+                generateRandomNumber();
+                scoreElement.textContent = score;
+                checkGameStatus();
+            }
+        }
+
+        // 向上移动
+        function moveUp() {
+            let isChanged = false;
+            for (let j = 0; j < 4; j++) {
+                // 提取列
+                const originalCol = [board[0][j], board[1][j], board[2][j], board[3][j]];
+                const newCol = processRow(originalCol);
+                if (JSON.stringify(originalCol) !== JSON.stringify(newCol)) {
+                    isChanged = true;
+                    // 更新列
+                    board[0][j] = newCol[0];
+                    board[1][j] = newCol[1];
+                    board[2][j] = newCol[2];
+                    board[3][j] = newCol[3];
+                }
+            }
+            if (isChanged) {
+                generateRandomNumber();
+                scoreElement.textContent = score;
+                checkGameStatus();
+            }
+        }
+
+        // 向下移动
+        function moveDown() {
+            let isChanged = false;
+            for (let j = 0; j < 4; j++) {
+                // 提取列并反转
+                const originalCol = [board[0][j], board[1][j], board[2][j], board[3][j]];
+                const reversedCol = originalCol.reverse();
+                const newCol = processRow(reversedCol).reverse();
+                if (JSON.stringify(originalCol) !== JSON.stringify(newCol)) {
+                    isChanged = true;
+                    // 更新列
+                    board[0][j] = newCol[0];
+                    board[1][j] = newCol[1];
+                    board[2][j] = newCol[2];
+                    board[3][j] = newCol[3];
+                }
+            }
+            if (isChanged) {
+                generateRandomNumber();
+                scoreElement.textContent = score;
+                checkGameStatus();
+            }
+        }
+
+        // 检查游戏状态（胜利/失败）
+        function checkGameStatus() {
+            // 检查是否达到2048（胜利）
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (board[i][j] === 2048) {
+                        showModal('恭喜！你达到了2048，游戏胜利！');
+                        return;
+                    }
+                }
+            }
+
+            // 检查是否有可移动的空间
+            // 1. 检查是否有空位
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (board[i][j] === 0) return;
+                }
+            }
+
+            // 2. 检查相邻是否有相同数字（横向）
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (board[i][j] === board[i][j + 1]) return;
+                }
+            }
+
+            // 3. 检查相邻是否有相同数字（纵向）
+            for (let j = 0; j < 4; j++) {
+                for (let i = 0; i < 3; i++) {
+                    if (board[i][j] === board[i + 1][j]) return;
+                }
+            }
+
+            // 没有可移动空间，游戏失败
+            showModal('游戏结束！没有可移动的空间了，点击重新开始试试吧～');
+        }
+
+        // 显示弹窗
+        function showModal(text) {
+            modalText.textContent = text;
+            modal.style.display = 'flex';
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            initBoard();
+            closeModal();
+        }
+
+        // 监听键盘方向键
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowLeft':
+                    moveLeft();
+                    break;
+                case 'ArrowRight':
+                    moveRight();
+                    break;
+                case 'ArrowUp':
+                    moveUp();
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    break;
+            }
+            renderBoard();
+        });
+
+        // 初始化游戏
+        initBoard();
+    </script>
+</body>
+</html>
