@@ -103,12 +103,12 @@
         const PIPE_INTERVAL = 110;
 
         // =============================================
-        //  ✈️ 飞机图片配置（请确保图片文件和html同目录）
+        //  ✈️ 飞机图片配置（重点修复！）
         // =============================================
         const PLANE_IMG_SRC = '飞机_clean.png'; 
-        const PLANE_WIDTH   = 120;          
-        const PLANE_HEIGHT  = 60;           
-        const BIRD_RADIUS   = 16;           
+        const PLANE_WIDTH   = 50;   // 显示宽度，调大让飞机更明显
+        const PLANE_HEIGHT  = 30;   // 显示高度，和宽度保持比例
+        const BIRD_RADIUS   = 16;   // 碰撞检测半径（和飞机大小匹配）
         // =============================================
 
         // 预加载飞机图片
@@ -158,7 +158,6 @@
             particles = [];
             cancelAnimationFrame(animId);
             draw();
-            // 关键修复：循环只启动一次
             if (!animId) {
                 loop();
             }
@@ -169,14 +168,17 @@
             ctx.save();
             startPlaneFloat += 0.05;
             const floatY = Math.sin(startPlaneFloat) * 8;
-            const drawX = bird.x - PLANE_WIDTH / 4;
-            const drawY = bird.y + floatY - PLANE_HEIGHT / 4;
+            
+            // 修复1：直接以bird坐标为中心绘制，不再偏移
+            const drawX = bird.x;
+            const drawY = bird.y + floatY;
 
             if (planeImg.complete && !planeImg.error) {
+                // 修复2：以图片中心为原点绘制，居中对齐
                 ctx.drawImage(
                     planeImg,
-                    drawX, drawY,
-                    PLANE_WIDTH / 2, PLANE_HEIGHT / 2
+                    drawX - PLANE_WIDTH / 2, drawY - PLANE_HEIGHT / 2,
+                    PLANE_WIDTH, PLANE_HEIGHT
                 );
             } else {
                 // 降级方案：绘制默认小鸟
@@ -195,14 +197,16 @@
         // 游戏中飞机绘制
         function drawPlayingPlane() {
             ctx.save();
+            // 修复3：旋转以飞机中心为原点
             ctx.translate(bird.x, bird.y);
             ctx.rotate(bird.rotation * Math.PI / 180);
 
             if (planeImg.complete && !planeImg.error) {
+                // 修复4：以图片中心为原点绘制
                 ctx.drawImage(
                     planeImg,
-                    -PLANE_WIDTH / 4, -PLANE_HEIGHT / 4,
-                    PLANE_WIDTH / 2, PLANE_HEIGHT / 2
+                    -PLANE_WIDTH / 2, -PLANE_HEIGHT / 2,
+                    PLANE_WIDTH, PLANE_HEIGHT
                 );
             } else {
                 ctx.fillStyle = '#4ade80';
@@ -350,7 +354,7 @@
                     }
                 }
 
-                // 碰撞检测
+                // 碰撞检测（和飞机大小匹配）
                 const birdRect = {
                     x: bird.x - BIRD_RADIUS,
                     y: bird.y - BIRD_RADIUS,
@@ -388,7 +392,7 @@
             createExplosion(bird.x, bird.y);
         }
 
-        // 主循环（关键修复：只执行一次）
+        // 主循环（只执行一次）
         function loop() {
             update();
             draw();
