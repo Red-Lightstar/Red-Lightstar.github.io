@@ -2,7 +2,6 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <!-- 核心优化：移动端视口适配，禁止缩放，强制满屏 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>游戏中心</title>
     <style>
@@ -14,13 +13,11 @@
             font-family: 'Microsoft YaHei', Arial, sans-serif;
         }
         body {
-            /* 终极适配：多端统一铺满背景，无露边 */
+            /* 背景铺满，完整展示图片 */
             background: url("leaf-bg.jpg") no-repeat center center / cover fixed;
-            background-color: #1a1a2e; /* 兜底底色 */
+            background-color: #1a1a2e;
             background-blend-mode: soft-light;
-            /* 解决移动端高度不足问题 */
             min-height: 100vh;
-            /* 兼容刘海屏/全面屏 */
             min-height: -webkit-fill-available;
             padding: 20px 15px;
             color: #fff;
@@ -28,18 +25,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            /* 禁止横向滚动，解决移动端溢出 */
             overflow-x: hidden;
-            /* 移动端触摸优化 */
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 修复iOS高度问题 */
         html {
             height: -webkit-fill-available;
         }
 
-        /* ============= 更新日志模块（移动端优化） ============= */
+        /* ============= 更新日志模块 ============= */
         #logToggle {
             position: fixed;
             top: 20px;
@@ -55,7 +49,6 @@
             z-index: 99;
             min-width: 80px;
             text-align: center;
-            /* 移动端点击区域放大 */
             touch-action: manipulation;
         }
         #logToggle:hover {
@@ -69,7 +62,6 @@
             border: 1px solid #ddd;
             border-radius: 10px;
             padding: 15px;
-            /* 移动端宽度自适应，不超屏 */
             width: calc(100vw - 30px);
             max-width: 320px;
             max-height: 250px;
@@ -94,7 +86,7 @@
             line-height: 1.4;
         }
 
-        /* ============= 反馈按钮模块（移动端优化） ============= */
+        /* ============= 反馈按钮模块 ============= */
         #feedbackBtn {
             position: fixed;
             top: 20px;
@@ -112,7 +104,6 @@
             font-size: 20px;
             transition: all 0.2s;
             z-index: 99;
-            /* 移动端点击优化 */
             touch-action: manipulation;
         }
         #feedbackBtn:hover {
@@ -120,62 +111,64 @@
             transform: scale(1.05);
         }
 
-        /* ============= 游戏中心主体（移动端核心优化） ============= */
+        /* ============= 游戏中心主体（移除黑框核心修改） ============= */
         .container {
-            /* 移动端宽度100%，不留边 */
             width: 100%;
             max-width: 900px;
             text-align: center;
-            background: rgba(0,0,0,0.7);
-            padding: 30px 20px;
+            /* 移除深色黑框：删除背景色、大幅降低透明度 */
+            background: rgba(0,0,0,0.1); 
+            /* 移除厚重阴影，保留轻微轮廓 */
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            /* 减少内边距，更通透 */
+            padding: 20px 15px;
             border-radius: 20px;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            /* 移动端间距优化 */
             margin: 20px 0;
         }
         h1 {
             color: #ffd700;
-            font-size: clamp(28px, 8vw, 40px); /* 响应式字体，适配所有手机 */
+            font-size: clamp(28px, 8vw, 40px);
             margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            /* 加强文字阴影，突出标题（无黑框后关键） */
+            text-shadow: 0 0 8px #000, 0 0 15px rgba(0,0,0,0.8);
         }
         .subtitle {
-            color: #eee;
+            color: #fff;
             font-size: clamp(14px, 4vw, 16px);
             margin-bottom: 25px;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            /* 加强文字阴影，保证可读性 */
+            text-shadow: 0 0 5px #000, 0 0 10px rgba(0,0,0,0.8);
         }
-        /* 游戏卡片容器：移动端自适应布局 */
+        /* 游戏卡片容器 */
         .games {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            /* 移动端间距更小，适配屏幕 */
             gap: 15px;
-            /* 防止卡片挤压 */
             padding: 5px 0;
         }
-        /* 游戏卡片：移动端完全适配 */
+        /* 游戏卡片（强化视觉，突出按键） */
         .game-card {
-            background: rgba(0,0,0,0.8);
-            border: 3px solid #ffd700;
+            /* 轻微背景，不挡图片但能突出卡片 */
+            background: rgba(0,0,0,0.3);
+            /* 加粗金色边框，强化卡片轮廓 */
+            border: 4px solid #ffd700;
             border-radius: 15px;
             padding: 20px 15px;
             text-decoration: none;
             color: #fff;
-            /* 移动端卡片自适应宽度（双列） */
             width: calc(50% - 7.5px);
-            /* 高度自适应，不固定，避免挤压 */
             min-height: 180px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
-            /* 移动端点击优化 */
             touch-action: manipulation;
+            /* 轻微阴影，增加层次感 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
-        /* 大屏平板适配（768px以上） */
+        /* 大屏平板适配 */
         @media (min-width: 768px) {
             .game-card {
                 width: 180px;
@@ -184,34 +177,39 @@
                 gap: 10px;
             }
             .container {
-                padding: 40px 30px;
+                padding: 30px 20px;
             }
             .games {
                 gap: 25px;
             }
         }
+        /* 卡片hover效果强化，突出交互 */
         .game-card:hover {
             border-color: #ff4500;
             transform: translateY(-5px);
-            background: rgba(0,0,0,0.9);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            /* 加深hover背景，强化选中状态 */
+            background: rgba(0,0,0,0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
         }
         .game-icon {
-            font-size: clamp(40px, 15vw, 70px); /* 响应式图标 */
+            font-size: clamp(40px, 15vw, 70px);
             margin-bottom: 10px;
+            /* 图标加阴影，突出显示 */
+            text-shadow: 0 0 8px #000;
         }
         .game-title {
             font-size: clamp(18px, 5vw, 22px);
             font-weight: bold;
             margin-bottom: 5px;
+            text-shadow: 0 0 5px #000;
         }
         .game-desc {
-            color: #ccc;
+            color: #fff;
             font-size: clamp(11px, 3vw, 12px);
             line-height: 1.3;
             text-align: center;
-            /* 防止文字溢出 */
             word-wrap: break-word;
+            text-shadow: 0 0 3px #000;
         }
         .new-game-tip {
             display: none;
@@ -322,12 +320,10 @@
             e.stopPropagation();
         };
 
-        // 修复移动端窗口变化时的适配问题
         window.addEventListener('resize', () => {
             document.body.style.minHeight = '100vh';
         });
 
-        // 解决iOS滚动回弹导致的背景错位
         window.addEventListener('scroll', () => {
             document.body.style.backgroundPosition = 'center center';
         });
