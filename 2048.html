@@ -443,17 +443,20 @@
             return res;
         }
 
+        // 核心：左移 + 撞黑洞消失 + 消失加分 + 判断是否真的有移动
         function moveLeft(){
             if(isWin) return false;
             let hasRealMove = false;
 
             for(let i=0;i<SIZE;i++){
                 let row = [];
+                // 先取出本行所有数字
                 for(let j=0;j<SIZE;j++){
                     if(!isHole(i,j) && grid[i][j]>0){
                         row.push(grid[i][j]);
                     }
                 }
+                // 合并相同数字
                 for(let k=0;k<row.length-1;k++){
                     if(row[k]===row[k+1]){
                         row[k]*=2;
@@ -464,18 +467,21 @@
                     }
                 }
 
+                // 清空本行非黑洞格子
                 for(let j=0;j<SIZE;j++){
                     if(!isHole(i,j)) grid[i][j]=0;
                 }
 
+                // 向左填充，碰到黑洞直接截断，后面数字撞黑洞消失并加分
                 let idx = 0;
                 for(let j=0;j<SIZE;j++){
-                    if(isHole(i,j)) break;
+                    if(isHole(i,j)) break; // 碰到黑洞，后面数字全部消失
                     if(idx < row.length){
                         grid[i][j] = row[idx++];
                     }
                 }
 
+                // 没填充进去的数字 = 撞黑洞消失，结算分数
                 while(idx < row.length){
                     score += row[idx];
                     scoreEl.innerText = score;
@@ -483,6 +489,7 @@
                 }
             }
 
+            // 判断是否有真实位移
             let oldGrid = JSON.parse(JSON.stringify(grid));
             for(let i=0;i<SIZE;i++){
                 for(let j=0;j<SIZE;j++){
@@ -495,29 +502,40 @@
             return hasRealMove;
         }
 
+        // 修复方向键移动逻辑，每个方向单独处理
         function moveUp(){
-            if(isWin) return;
+            if(isWin) return false;
             grid=rotate(grid);grid=rotate(grid);grid=rotate(grid);
-            doMove();
+            let realMoved = moveLeft();
             grid=rotate(grid);
+            return realMoved;
         }
         function moveRight(){
-            if(isWin) return;
+            if(isWin) return false;
             grid=rotate(grid);grid=rotate(grid);
-            doMove();
+            let realMoved = moveLeft();
             grid=rotate(grid);grid=rotate(grid);
+            return realMoved;
         }
         function moveDown(){
-            if(isWin) return;
+            if(isWin) return false;
             grid=rotate(grid);
-            doMove();
+            let realMoved = moveLeft();
             grid=rotate(grid);grid=rotate(grid);grid=rotate(grid);
+            return realMoved;
         }
 
-        function doMove(){
-            let old = JSON.stringify(grid);
-            let realMoved = moveLeft();
+        // 统一处理移动逻辑
+        function handleMove(direction){
+            let realMoved = false;
+            switch(direction){
+                case 'left': realMoved = moveLeft(); break;
+                case 'up': realMoved = moveUp(); break;
+                case 'right': realMoved = moveRight(); break;
+                case 'down': realMoved = moveDown(); break;
+            }
 
+            // 只有真实移动了，才计数、生成黑洞
             if(realMoved){
                 playSound('move');
                 moveCount++;
@@ -578,13 +596,18 @@
             window.location.href = "https://red-lightstar.github.io/index.html";
         });
 
-        // 键盘控制
+        // 修复键盘控制 - 核心问题解决
         document.addEventListener('keydown',e=>{
+            // 阻止方向键的默认行为（如页面滚动）
+            if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+                e.preventDefault();
+            }
+            
             switch(e.key){
-                case 'ArrowUp':moveUp();break;
-                case 'ArrowDown':moveDown();break;
-                case 'ArrowLeft':doMove();break;
-                case 'ArrowRight':moveRight();break;
+                case 'ArrowUp': handleMove('up'); break;
+                case 'ArrowDown': handleMove('down'); break;
+                case 'ArrowLeft': handleMove('left'); break;
+                case 'ArrowRight': handleMove('right'); break;
             }
         });
 
@@ -599,11 +622,11 @@
             let ey=e.changedTouches[0].clientY;
             let dx=ex-tx,dy=ey-ty;
             if(Math.abs(dx)>Math.abs(dy)){
-                if(dx>30) moveRight();
-                else if(dx<-30) doMove();
+                if(dx>30) handleMove('right');
+                else if(dx<-30) handleMove('left');
             }else{
-                if(dy>30) moveDown();
-                else if(dy<-30) moveUp();
+                if(dy>30) handleMove('down');
+                else if(dy<-30) handleMove('up');
             }
         });
 
