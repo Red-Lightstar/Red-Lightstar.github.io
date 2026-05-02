@@ -3,393 +3,612 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2048 - Red-Lightstar的小游戏</title>
+    <title>星核聚变 2048</title>
     <style>
-        /* 全局样式统一 */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: "Microsoft Yahei", sans-serif;
         }
+
         body {
-            background-color: #f0f0f0;
+            background: #0a0e27;
+            background-image: radial-gradient(circle at 50% 50%, #101a40 0%, #050714 100%);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            color: #fff;
             padding: 20px;
         }
-        h1 {
-            color: #333;
+
+        .title {
+            font-size: 36px;
             margin-bottom: 15px;
+            color: #73c0ff;
+            text-shadow: 0 0 10px #409eff;
         }
-        /* 分数显示 */
-        .score-panel {
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 10px;
+
+        .info-bar {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #ccc;
+            display: flex;
+            gap: 25px;
+            align-items: center;
         }
-        #score {
-            color: #f65e3b;
+
+        .score {
+            color: #ffd700;
             font-weight: bold;
         }
-        /* 游戏容器 */
-        #game-container {
-            width: 400px;
-            height: 400px;
-            background-color: #bbada0;
+
+        .count {
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .base-btn {
+            padding: 12px 24px;
+            font-size: 18px;
+            background: #409eff;
+            border: none;
+            color: #fff;
             border-radius: 8px;
-            padding: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .base-btn:hover {
+            background: #2a7dcc;
+        }
+
+        .game-wrapper {
+            position: relative;
+        }
+
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            border-radius: 15px;
+            z-index: 10;
+        }
+
+        /* 放大游戏主界面 500px，操作更轻松 */
+        #game-container {
+            width: 500px;
+            height: 500px;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            gap: 15px;
+            gap: 8px;
+            background: rgba(30, 40, 80, 0.5);
+            padding: 12px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px #204080;
+            position: relative;
+            z-index: 2;
+            touch-action: none;
         }
-        /* 格子样式 */
+
         .cell {
-            background-color: #cdc1b4;
-            border-radius: 4px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
-            color: #776e65;
+            transition: all 0.15s ease;
+            background: rgba(50, 70, 120, 0.4);
         }
-        /* 不同数字的背景色 */
-        .cell-2 { background-color: #eee4da; }
-        .cell-4 { background-color: #ede0c8; }
-        .cell-8 { background-color: #f2b179; color: #f9f6f2; }
-        .cell-16 { background-color: #f59563; color: #f9f6f2; }
-        .cell-32 { background-color: #f67c5f; color: #f9f6f2; }
-        .cell-64 { background-color: #f65e3b; color: #f9f6f2; }
-        .cell-128 { background-color: #edcf72; color: #f9f6f2; font-size: 24px; }
-        .cell-256 { background-color: #edcc61; color: #f9f6f2; font-size: 24px; }
-        .cell-512 { background-color: #edc850; color: #f9f6f2; font-size: 24px; }
-        .cell-1024 { background-color: #edc53f; color: #f9f6f2; font-size: 20px; }
-        .cell-2048 { background-color: #edc22e; color: #f9f6f2; font-size: 20px; }
-        .cell-4096 { background-color: #3c3a32; color: #f9f6f2; font-size: 20px; }
-        /* 操作说明 */
-        .controls {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #666;
-            text-align: center;
+
+        .cell-hole {
+            background: #000 !important;
+            box-shadow: 0 0 15px #000, inset 0 0 10px #222;
+            color: transparent !important;
         }
-        /* 按钮样式统一 */
-        .btn-group {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
+
+        @keyframes holeEnter {
+            0% {
+                transform: scale(0.2);
+                opacity: 0;
+                box-shadow: 0 0 0 #000;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+                box-shadow: 0 0 15px #000, inset 0 0 10px #222;
+            }
         }
-        .back-btn, .restart-btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            color: white;
+        .cell-hole-new {
+            animation: holeEnter 0.4s ease forwards;
         }
-        .back-btn {
-            background-color: #4CAF50;
+
+        .cell-2 { background: #234; color: #8cf; }
+        .cell-4 { background: #246; color: #9df; }
+        .cell-8 { background: #268; color: #aff; }
+        .cell-16 { background: #28a; color: #cff; }
+        .cell-32 { background: #3a8; color: #df8; }
+        .cell-64 { background: #4a6; color: #ef8; }
+        .cell-128 { background: #6a4; color: #fd8; }
+        .cell-256 { background: #8a2; color: #fc8; }
+        .cell-512 { background: #a82; color: #fa8; }
+        .cell-1024 { background: #a62; color: #f88; }
+        .cell-2048 { 
+            background: radial-gradient(#ff6, #f80); 
+            color: #fff;
+            box-shadow: 0 0 20px #ff0;
         }
-        .back-btn:hover {
-            background-color: #45a049;
+
+        .game-over-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            border-radius: 15px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            z-index: 20;
         }
-        .restart-btn {
-            background-color: #2196F3;
-        }
-        .restart-btn:hover {
-            background-color: #1976D2;
-        }
-        /* 提示弹窗 */
-        .modal {
+
+        .mask {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.8);
             display: none;
             align-items: center;
             justify-content: center;
+            z-index: 99;
         }
-        .modal-content {
-            background-color: white;
+        .help-box {
+            width: 90%;
+            max-width: 450px;
+            background: #101a40;
+            border-radius: 15px;
             padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 20px;
+            color: #eee;
+            line-height: 1.8;
+            font-size: 18px;
         }
-        .modal-btn {
-            margin-top: 20px;
-            padding: 8px 20px;
-            background-color: #f65e3b;
-            color: white;
+        .help-box h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #73c0ff;
+            font-size: 24px;
+        }
+        .help-close {
+            width: 100%;
+            margin-top: 25px;
+            padding: 12px;
+            background: #409eff;
             border: none;
-            border-radius: 4px;
+            color: #fff;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 520px) {
+            #game-container {
+                width: 380px;
+                height: 380px;
+            }
+            .cell {
+                font-size: 26px;
+            }
+            .title {
+                font-size: 28px;
+            }
+            .base-btn {
+                padding: 8px 16px;
+                font-size: 16px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>2048 小游戏</h1>
-    <div class="score-panel">当前分数：<span id="score">0</span></div>
-    <div id="game-container"></div>
-    <div class="controls">
-        操作说明：上下左右方向键控制数字移动，相同数字碰撞合并，达到2048即胜利！
-    </div>
-    <div class="btn-group">
-        <button class="restart-btn" onclick="restartGame()">重新开始</button>
-        <button class="back-btn" onclick="window.location.href='index.html'">返回游戏列表</button>
+    <div class="title">星核聚变 2048</div>
+    <div class="info-bar">
+        <span>分数：<span class="score" id="score">0</span></span>
+        <span>有效滑动：<span class="count" id="moveCount">0</span></span>
+        <span>黑洞上限：3</span>
     </div>
 
-    <!-- 胜利/失败弹窗 -->
-    <div class="modal" id="modal">
-        <div class="modal-content">
-            <p id="modal-text"></p>
-            <button class="modal-btn" onclick="closeModal()">确定</button>
+    <div class="btn-group">
+        <button class="base-btn" id="helpBtn">游戏说明</button>
+        <button class="base-btn" id="homeBtn">返回游戏大厅</button>
+        <button class="base-btn" onclick="initGame()">重新开始</button>
+    </div>
+
+    <div class="game-wrapper">
+        <canvas id="particle-canvas"></canvas>
+        <div id="game-container"></div>
+        <div class="game-over-modal" id="gameOverModal">
+            <div id="overText">游戏结束</div>
+            <button class="base-btn" onclick="initGame()" style="margin-top:20px">重新开始</button>
+        </div>
+    </div>
+
+    <div class="mask" id="helpMask">
+        <div class="help-box">
+            <h3>🎮 游戏说明</h3>
+            <p>1. 操作：键盘方向键 / 手机屏幕滑动</p>
+            <p>2. 规则：相同数字碰撞合并翻倍</p>
+            <p>3. 获胜：合成 <b>2048</b> 即可胜利</p>
+            <p>4. 黑洞机制：每有效滑动10次生成1个黑洞</p>
+            <p>5. 黑洞最多存在3个，超出自动删除最早的</p>
+            <p>6. 黑洞可直接刷新在数字上，强制覆盖</p>
+            <p>7. 数字碰到黑洞会直接消失并结算分数</p>
+            <p>8. 无任何数字移动时，不计入有效滑动</p>
+            <p>9. 合成2048触发粒子爆炸特效与音效</p>
+            <button class="help-close" id="closeHelpBtn">关闭</button>
         </div>
     </div>
 
     <script>
-        // 游戏核心变量
-        let board = []; // 4x4棋盘
-        let score = 0;
         const gameContainer = document.getElementById('game-container');
-        const scoreElement = document.getElementById('score');
-        const modal = document.getElementById('modal');
-        const modalText = document.getElementById('modal-text');
+        const scoreEl = document.getElementById('score');
+        const moveCountEl = document.getElementById('moveCount');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const overText = document.getElementById('overText');
+        const particleCanvas = document.getElementById('particle-canvas');
+        const ctx = particleCanvas.getContext('2d');
 
-        // 初始化棋盘
-        function initBoard() {
-            board = Array(4).fill().map(() => Array(4).fill(0));
-            score = 0;
-            scoreElement.textContent = score;
-            // 初始生成2个随机数字
-            generateRandomNumber();
-            generateRandomNumber();
-            renderBoard();
+        const helpMask = document.getElementById('helpMask');
+        const helpBtn = document.getElementById('helpBtn');
+        const closeHelpBtn = document.getElementById('closeHelpBtn');
+        const homeBtn = document.getElementById('homeBtn');
+
+        const SIZE = 4;
+        const MAX_HOLE = 3;
+        const HOLE_STEP = 10;
+
+        let grid = [];
+        let score = 0;
+        let moveCount = 0;
+        let holeList = [];
+        let newHolePos = null;
+        let isWin = false;
+        let particles = [];
+        let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function initCanvas() {
+            particleCanvas.width = gameContainer.offsetWidth;
+            particleCanvas.height = gameContainer.offsetHeight;
         }
 
-        // 生成随机数字（2或4，90%概率2，10%概率4）
-        function generateRandomNumber() {
-            // 找空位置
-            const emptyCells = [];
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 4; j++) {
-                    if (board[i][j] === 0) {
-                        emptyCells.push({ x: i, y: j });
+        function playSound(type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            if(type === 'move'){
+                osc.frequency.value = 220;
+                gain.gain.value = 0.1;
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            }else if(type === 'merge'){
+                osc.frequency.value = 440;
+                gain.gain.value = 0.12;
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.12);
+            }else if(type === 'boom'){
+                osc.type = 'sawtooth';
+                osc.frequency.value = 120;
+                gain.gain.value = 0.15;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                osc.stop(audioCtx.currentTime + 0.5);
+            }
+        }
+
+        class Particle {
+            constructor(x,y){
+                this.x=x;this.y=y;
+                this.radius=Math.random()*4+2;
+                this.vx=(Math.random()-0.5)*6;
+                this.vy=(Math.random()-0.5)*6;
+                this.alpha=1;
+                this.color=`hsl(${Math.random()*60+30},100%,60%)`;
+            }
+            draw(){
+                ctx.save();ctx.globalAlpha=this.alpha;
+                ctx.fillStyle=this.color;
+                ctx.beginPath();ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+                ctx.fill();ctx.restore();
+            }
+            update(){
+                this.x+=this.vx;this.y+=this.vy;this.alpha-=0.02;
+            }
+        }
+        function boomEffect(){
+            particles=[];
+            let cx=particleCanvas.width/2,cy=particleCanvas.height/2;
+            for(let i=0;i<80;i++) particles.push(new Particle(cx,cy));
+            animateParticles();
+        }
+        function animateParticles(){
+            ctx.clearRect(0,0,particleCanvas.width,particleCanvas.height);
+            for(let i=particles.length-1;i>=0;i--){
+                particles[i].update();particles[i].draw();
+                if(particles[i].alpha<=0) particles.splice(i,1);
+            }
+            if(particles.length>0) requestAnimationFrame(animateParticles);
+        }
+
+        function initGame() {
+            score = 0;
+            moveCount = 0;
+            holeList = [];
+            newHolePos = null;
+            isWin = false;
+            particles = [];
+            scoreEl.innerText = score;
+            moveCountEl.innerText = moveCount;
+            gameOverModal.style.display = 'none';
+
+            grid = Array(SIZE).fill(0).map(()=>Array(SIZE).fill(0));
+            initCanvas();
+            randomNewNum();
+            randomNewNum();
+            renderGrid();
+        }
+
+        function randomNewNum() {
+            let empty = [];
+            for(let i=0;i<SIZE;i++){
+                for(let j=0;j<SIZE;j++){
+                    if(grid[i][j]===0 && !isHole(i,j)){
+                        empty.push({x:i,y:j});
                     }
                 }
             }
-            // 没有空位置则返回
-            if (emptyCells.length === 0) return;
-            // 随机选一个空位置
-            const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-            // 随机生成2或4
-            board[randomCell.x][randomCell.y] = Math.random() < 0.9 ? 2 : 4;
+            if(empty.length===0) return;
+            let p = empty[Math.floor(Math.random()*empty.length)];
+            grid[p.x][p.y] = Math.random()>0.5 ? 2 : 4;
         }
 
-        // 渲染棋盘
-        function renderBoard() {
+        function isHole(x,y){
+            return holeList.some(h=>h.x===x&&h.y===y);
+        }
+
+        function addNewHole() {
+            let canPlace = [];
+            for(let i=0;i<SIZE;i++){
+                for(let j=0;j<SIZE;j++){
+                    if(!isHole(i,j)){
+                        canPlace.push({x:i,y:j});
+                    }
+                }
+            }
+            if(canPlace.length===0) return;
+
+            let pos = canPlace[Math.floor(Math.random()*canPlace.length)];
+            newHolePos = pos;
+            holeList.push(pos);
+
+            if(holeList.length > MAX_HOLE){
+                holeList.shift();
+            }
+            renderGrid();
+        }
+
+        function renderGrid() {
             gameContainer.innerHTML = '';
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 4; j++) {
-                    const cell = document.createElement('div');
+            for(let i=0;i<SIZE;i++){
+                for(let j=0;j<SIZE;j++){
+                    let cell = document.createElement('div');
                     cell.className = 'cell';
-                    if (board[i][j] !== 0) {
-                        cell.classList.add(`cell-${board[i][j]}`);
-                        cell.textContent = board[i][j];
+
+                    if(isHole(i,j)){
+                        cell.classList.add('cell-hole');
+                        if(newHolePos && newHolePos.x === i && newHolePos.y === j){
+                            cell.classList.add('cell-hole-new');
+                            setTimeout(()=> newHolePos = null, 400);
+                        }
+                    }else{
+                        let val = grid[i][j];
+                        cell.innerText = val||'';
+                        if(val) cell.classList.add(`cell-${val}`);
                     }
                     gameContainer.appendChild(cell);
                 }
             }
         }
 
-        // 处理行的移动（向左移动逻辑）
-        function processRow(row) {
-            // 1. 移除空值
-            let newRow = row.filter(num => num !== 0);
-            // 2. 合并相同数字
-            for (let i = 0; i < newRow.length - 1; i++) {
-                if (newRow[i] === newRow[i + 1]) {
-                    newRow[i] *= 2;
-                    newRow[i + 1] = 0;
-                    score += newRow[i]; // 更新分数
-                }
-            }
-            // 3. 再次移除空值，补0
-            newRow = newRow.filter(num => num !== 0);
-            while (newRow.length < 4) {
-                newRow.push(0);
-            }
-            return newRow;
+        function rotate(g){
+            let res = Array(SIZE).fill(0).map(()=>Array(SIZE).fill(0));
+            for(let i=0;i<SIZE;i++)
+                for(let j=0;j<SIZE;j++)
+                    res[j][SIZE-1-i] = g[i][j];
+            return res;
         }
 
-        // 向左移动
-        function moveLeft() {
-            let isChanged = false;
-            for (let i = 0; i < 4; i++) {
-                const originalRow = [...board[i]];
-                const newRow = processRow(originalRow);
-                if (JSON.stringify(originalRow) !== JSON.stringify(newRow)) {
-                    isChanged = true;
-                    board[i] = newRow;
+        function moveLeft(){
+            if(isWin) return false;
+            let hasRealMove = false;
+
+            for(let i=0;i<SIZE;i++){
+                let row = [];
+                for(let j=0;j<SIZE;j++){
+                    if(!isHole(i,j) && grid[i][j]>0){
+                        row.push(grid[i][j]);
+                    }
+                }
+                for(let k=0;k<row.length-1;k++){
+                    if(row[k]===row[k+1]){
+                        row[k]*=2;
+                        score+=row[k];
+                        scoreEl.innerText=score;
+                        playSound('merge');
+                        row.splice(k+1,1);
+                    }
+                }
+
+                for(let j=0;j<SIZE;j++){
+                    if(!isHole(i,j)) grid[i][j]=0;
+                }
+
+                let idx = 0;
+                for(let j=0;j<SIZE;j++){
+                    if(isHole(i,j)) break;
+                    if(idx < row.length){
+                        grid[i][j] = row[idx++];
+                    }
+                }
+
+                while(idx < row.length){
+                    score += row[idx];
+                    scoreEl.innerText = score;
+                    idx++;
                 }
             }
-            if (isChanged) {
-                generateRandomNumber();
-                scoreElement.textContent = score;
-                checkGameStatus();
+
+            let oldGrid = JSON.parse(JSON.stringify(grid));
+            for(let i=0;i<SIZE;i++){
+                for(let j=0;j<SIZE;j++){
+                    if(oldGrid[i][j] !== grid[i][j]){
+                        hasRealMove = true;
+                        break;
+                    }
+                }
             }
+            return hasRealMove;
         }
 
-        // 向右移动
-        function moveRight() {
-            let isChanged = false;
-            for (let i = 0; i < 4; i++) {
-                const originalRow = [...board[i]];
-                // 反转行，处理后再反转
-                const reversedRow = originalRow.reverse();
-                const newRow = processRow(reversedRow).reverse();
-                if (JSON.stringify(originalRow) !== JSON.stringify(newRow)) {
-                    isChanged = true;
-                    board[i] = newRow;
-                }
-            }
-            if (isChanged) {
-                generateRandomNumber();
-                scoreElement.textContent = score;
-                checkGameStatus();
-            }
+        function moveUp(){
+            if(isWin) return;
+            grid=rotate(grid);grid=rotate(grid);grid=rotate(grid);
+            doMove();
+            grid=rotate(grid);
+        }
+        function moveRight(){
+            if(isWin) return;
+            grid=rotate(grid);grid=rotate(grid);
+            doMove();
+            grid=rotate(grid);grid=rotate(grid);
+        }
+        function moveDown(){
+            if(isWin) return;
+            grid=rotate(grid);
+            doMove();
+            grid=rotate(grid);grid=rotate(grid);grid=rotate(grid);
         }
 
-        // 向上移动
-        function moveUp() {
-            let isChanged = false;
-            for (let j = 0; j < 4; j++) {
-                // 提取列
-                const originalCol = [board[0][j], board[1][j], board[2][j], board[3][j]];
-                const newCol = processRow(originalCol);
-                if (JSON.stringify(originalCol) !== JSON.stringify(newCol)) {
-                    isChanged = true;
-                    // 更新列
-                    board[0][j] = newCol[0];
-                    board[1][j] = newCol[1];
-                    board[2][j] = newCol[2];
-                    board[3][j] = newCol[3];
-                }
-            }
-            if (isChanged) {
-                generateRandomNumber();
-                scoreElement.textContent = score;
-                checkGameStatus();
-            }
-        }
+        function doMove(){
+            let old = JSON.stringify(grid);
+            let realMoved = moveLeft();
 
-        // 向下移动
-        function moveDown() {
-            let isChanged = false;
-            for (let j = 0; j < 4; j++) {
-                // 提取列并反转
-                const originalCol = [board[0][j], board[1][j], board[2][j], board[3][j]];
-                const reversedCol = originalCol.reverse();
-                const newCol = processRow(reversedCol).reverse();
-                if (JSON.stringify(originalCol) !== JSON.stringify(newCol)) {
-                    isChanged = true;
-                    // 更新列
-                    board[0][j] = newCol[0];
-                    board[1][j] = newCol[1];
-                    board[2][j] = newCol[2];
-                    board[3][j] = newCol[3];
+            if(realMoved){
+                playSound('move');
+                moveCount++;
+                moveCountEl.innerText=moveCount;
+
+                if(moveCount % HOLE_STEP === 0){
+                    addNewHole();
                 }
-            }
-            if (isChanged) {
-                generateRandomNumber();
-                scoreElement.textContent = score;
-                checkGameStatus();
+
+                randomNewNum();
+                renderGrid();
+                checkWin();
+                checkGameOver();
             }
         }
 
-        // 检查游戏状态（胜利/失败）
-        function checkGameStatus() {
-            // 检查是否达到2048（胜利）
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 4; j++) {
-                    if (board[i][j] === 2048) {
-                        showModal('恭喜！你达到了2048，游戏胜利！');
+        function checkWin(){
+            if(isWin) return;
+            for(let i=0;i<SIZE;i++){
+                for(let j=0;j<SIZE;j++){
+                    if(grid[i][j]===2048){
+                        isWin=true;
+                        playSound('boom');
+                        boomEffect();
+                        overText.innerText="恭喜合成 2048！";
+                        gameOverModal.style.display='flex';
                         return;
                     }
                 }
             }
+        }
 
-            // 检查是否有可移动的空间
-            // 1. 检查是否有空位
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 4; j++) {
-                    if (board[i][j] === 0) return;
+        function checkGameOver(){
+            for(let i=0;i<SIZE;i++)
+                for(let j=0;j<SIZE;j++)
+                    if(grid[i][j]===0 && !isHole(i,j)) return;
+            for(let i=0;i<SIZE;i++){
+                for(let j=0;j<SIZE;j++){
+                    let v=grid[i][j];
+                    if(v===0) continue;
+                    if(j+1<SIZE && !isHole(i,j+1) && grid[i][j+1]===v) return;
+                    if(i+1<SIZE && !isHole(i+1,j) && grid[i+1][j]===v) return;
                 }
             }
-
-            // 2. 检查相邻是否有相同数字（横向）
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 3; j++) {
-                    if (board[i][j] === board[i][j + 1]) return;
-                }
-            }
-
-            // 3. 检查相邻是否有相同数字（纵向）
-            for (let j = 0; j < 4; j++) {
-                for (let i = 0; i < 3; i++) {
-                    if (board[i][j] === board[i + 1][j]) return;
-                }
-            }
-
-            // 没有可移动空间，游戏失败
-            showModal('游戏结束！没有可移动的空间了，点击重新开始试试吧～');
+            overText.innerText="游戏结束";
+            gameOverModal.style.display='flex';
         }
 
-        // 显示弹窗
-        function showModal(text) {
-            modalText.textContent = text;
-            modal.style.display = 'flex';
-        }
-
-        // 关闭弹窗
-        function closeModal() {
-            modal.style.display = 'none';
-        }
-
-        // 重新开始游戏
-        function restartGame() {
-            initBoard();
-            closeModal();
-        }
-
-        // 监听键盘方向键
-        document.addEventListener('keydown', (e) => {
-            switch (e.key) {
-                case 'ArrowLeft':
-                    moveLeft();
-                    break;
-                case 'ArrowRight':
-                    moveRight();
-                    break;
-                case 'ArrowUp':
-                    moveUp();
-                    break;
-                case 'ArrowDown':
-                    moveDown();
-                    break;
-            }
-            renderBoard();
+        // 游戏说明弹窗
+        helpBtn.addEventListener('click', ()=>{
+            helpMask.style.display = 'flex';
+        });
+        closeHelpBtn.addEventListener('click', ()=>{
+            helpMask.style.display = 'none';
+        });
+        // 返回大厅 直接跳转指定链接
+        homeBtn.addEventListener('click', ()=>{
+            window.location.href = "https://red-lightstar.github.io/index.html";
         });
 
-        // 初始化游戏
-        initBoard();
+        // 键盘控制
+        document.addEventListener('keydown',e=>{
+            switch(e.key){
+                case 'ArrowUp':moveUp();break;
+                case 'ArrowDown':moveDown();break;
+                case 'ArrowLeft':doMove();break;
+                case 'ArrowRight':moveRight();break;
+            }
+        });
+
+        // 移动端触摸
+        let tx=0,ty=0;
+        gameContainer.addEventListener('touchstart',e=>{
+            tx=e.touches[0].clientX;
+            ty=e.touches[0].clientY;
+        });
+        gameContainer.addEventListener('touchend',e=>{
+            let ex=e.changedTouches[0].clientX;
+            let ey=e.changedTouches[0].clientY;
+            let dx=ex-tx,dy=ey-ty;
+            if(Math.abs(dx)>Math.abs(dy)){
+                if(dx>30) moveRight();
+                else if(dx<-30) doMove();
+            }else{
+                if(dy>30) moveDown();
+                else if(dy<-30) moveUp();
+            }
+        });
+
+        window.addEventListener('resize',initCanvas);
+        initGame();
     </script>
 </body>
 </html>
