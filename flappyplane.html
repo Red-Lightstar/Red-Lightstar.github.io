@@ -2,7 +2,6 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <!-- 手机适配核心 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Flappy Plane</title>
     <style>
@@ -64,16 +63,14 @@
         }
         #bestDisplay { color: #fbbf24; }
 
-        /* 画布自适应，等比例缩放 */
         #gameCanvas {
             border: 2px solid #3a3a5a;
             border-radius: 10px;
             display: block;
-            /* 手机自动缩放到屏幕宽度 */
             max-width: 92vw;
             height: auto;
             cursor: pointer;
-            touch-action: none; /* 禁止手机滑动默认行为 */
+            touch-action: none;
         }
         #hint {
             color: #888;
@@ -96,7 +93,7 @@
     <canvas id="gameCanvas" width="400" height="560"></canvas>
 
     <div id="hint">
-        点击 或 空格键 让飞机飞起来
+        点击 / 触屏 / 空格键 操控飞机
     </div>
 
 <script>
@@ -128,7 +125,11 @@ let bird, pipes, score, best, gameState;
 let frameCount = 0;
 let startFloat = 0;
 let animId;
-let particles = [];
+
+// 粒子类型：火焰、浓烟、飞机碎片
+let fireParticles = [];
+let smokeParticles = [];
+let planeFragments = [];
 
 const GAME_STATE = {
     READY: 'ready',
@@ -139,39 +140,121 @@ const GAME_STATE = {
 best = +localStorage.getItem('flappyBest') || 0;
 bestDisplay.textContent = `👑 ${best}`;
 
-// 爆炸粒子
-function createExplosion(x,y){
-    particles = [];
-    for(let i=0;i<15;i++){
-        let ang = Math.random()*Math.PI*2;
-        let spd = 1+Math.random()*2;
-        particles.push({
-            x:x, y:y,
-            vx:Math.cos(ang)*spd,
-            vy:Math.sin(ang)*spd,
-            r:3+Math.random()*4,
-            life:1,
-            decay:0.025
+// ========== 真实爆炸 + 飞机分裂碎片 ==========
+function createRealExplosion(px, py) {
+    fireParticles = [];
+    smokeParticles = [];
+    planeFragments = [];
+
+    // 1. 飞机碎裂成多块碎片
+    for(let i = 0; i < 8; i++) {
+        let angle = Math.random() * Math.PI * 2;
+        let speed = 2 + Math.random() * 4;
+        planeFragments.push({
+            x: px,
+            y: py,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            size: 8 + Math.random() * 12,
+            rot: Math.random() * 360,
+            rotSpeed: (Math.random() - 0.5) * 8,
+            life: 1
+        });
+    }
+
+    // 2. 核心火焰
+    for(let i = 0; i < 20; i++) {
+        let angle = Math.random() * Math.PI * 2;
+        let speed = 1 + Math.random() * 3;
+        fireParticles.push({
+            x: px,
+            y: py,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2,
+            r: 4 + Math.random() * 8,
+            life: 1,
+            decay: 0.025 + Math.random() * 0.02
+        });
+    }
+
+    // 3. 浓烟
+    for(let i = 0; i < 12; i++) {
+        smokeParticles.push({
+            x: px + (Math.random()-0.5)*20,
+            y: py - 10,
+            vx: (Math.random()-0.5)*1.2,
+            vy: -0.8 - Math.random() * 1.5,
+            r: 10 + Math.random() * 15,
+            life: 1,
+            decay: 0.012
         });
     }
 }
-function updateParticles(){
-    for(let i=particles.length-1;i>=0;i--){
-        let p = particles[i];
+
+function updateAllParticles() {
+    // 火焰
+    for(let i = fireParticles.length - 1; i >= 0; i--) {
+        let p = fireParticles[i];
         p.x += p.vx;
         p.y += p.vy;
+        p.vy -= 0.05;
         p.life -= p.decay;
-        if(p.life<=0) particles.splice(i,1);
+        if(p.life <= 0) fireParticles.splice(i,1);
+    }
+    // 浓烟
+    for(let i = smokeParticles.length - 1; i >= 0; i--) {
+        let p = smokeParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.r += 0.2;
+        p.life -= p.decay;
+        if(p.life <= 0) smokeParticles.splice(i,1);
+    }
+    // 飞机碎片
+    for(let i = planeFragments.length - 1; i >= 0; i--) {
+        let p = planeFragments[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.15;
+        p.rot += p.rotSpeed;
+        p.life -= 0.018;
+        if(p.life <= 0) planeFragments.splice(i,1);
     }
 }
-function drawParticles(){
-    for(let p of particles){
+
+function drawAllParticles() {
+    // 浓烟
+    for(let p of smokeParticles) {
+        ctx.save();
+        ctx.globalAlpha = p.life * 0.35;
+        ctx.fillStyle = '#222222';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    }
+    // 火焰渐变
+    for(let p of fireParticles) {
         ctx.save();
         ctx.globalAlpha = p.life;
-        ctx.fillStyle = "#ff6633";
+        let grad = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+        grad.addColorStop(0,'rgba(255,255,180,1)');
+        grad.addColorStop(0.4,'rgba(255,180,50,0.8)');
+        grad.addColorStop(1,'rgba(255,80,20,0)');
+        ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
         ctx.fill();
+        ctx.restore();
+    }
+    // 飞机碎裂碎片
+    for(let p of planeFragments) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot * Math.PI / 180);
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = '#e8e8e8';
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
         ctx.restore();
     }
 }
@@ -181,7 +264,9 @@ function init() {
     pipes = [];
     score = 0;
     frameCount = 0;
-    particles = [];
+    fireParticles = [];
+    smokeParticles = [];
+    planeFragments = [];
     gameState = GAME_STATE.READY;
     scoreDisplay.textContent = `🏆 0`;
     cancelAnimationFrame(animId);
@@ -197,6 +282,8 @@ function drawReadyPlane() {
 }
 
 function drawPlane() {
+    // 游戏结束不画原飞机，只画碎片
+    if(gameState === GAME_STATE.GAME_OVER) return;
     ctx.save();
     ctx.translate(bird.x, bird.y);
     ctx.rotate(bird.rot * Math.PI / 180);
@@ -204,7 +291,6 @@ function drawPlane() {
     ctx.restore();
 }
 
-// 上塔倒置 下塔正常
 function drawPipes() {
     for(let p of pipes){
         ctx.save();
@@ -226,21 +312,20 @@ function draw() {
         ctx.fillStyle = '#fff';
         ctx.font = '18px Microsoft YaHei';
         ctx.textAlign = 'center';
-        ctx.fillText('点击开始游戏', canvas.width/2, canvas.height/2 + 100);
+        ctx.fillText('点击开始飞行', canvas.width/2, canvas.height/2 + 100);
     }else if(gameState === GAME_STATE.PLAYING){
         drawPipes();
         drawPlane();
     }else if(gameState === GAME_STATE.GAME_OVER){
         drawPipes();
-        drawPlane();
-        drawParticles();
+        drawAllParticles();
         ctx.fillStyle = '#ff5555';
         ctx.font = '24px Microsoft YaHei';
         ctx.textAlign = 'center';
-        ctx.fillText('游戏结束', canvas.width/2, canvas.height/2 - 40);
+        ctx.fillText('毁了啊！', canvas.width/2, canvas.height/2 - 40);
         ctx.fillStyle = '#fff';
         ctx.font = '16px Microsoft YaHei';
-        ctx.fillText('点击重新开始', canvas.width/2, canvas.height/2);
+        ctx.fillText('点击重新飞行', canvas.width/2, canvas.height/2);
     }
 }
 
@@ -300,12 +385,12 @@ function update() {
 
 function gameOver(){
     gameState = GAME_STATE.GAME_OVER;
-    createExplosion(bird.x, bird.y);
+    createRealExplosion(bird.x, bird.y);
 }
 
 function loop() {
     update();
-    if(gameState === GAME_STATE.GAME_OVER) updateParticles();
+    if(gameState === GAME_STATE.GAME_OVER) updateAllParticles();
     draw();
     animId = requestAnimationFrame(loop);
 }
@@ -321,14 +406,11 @@ function flap(){
     }
 }
 
-// 手机点击、电脑点击
 canvas.addEventListener('click', flap);
-// 手机触摸也生效
 canvas.addEventListener('touchstart', e=>{
     e.preventDefault();
     flap();
 });
-// 电脑空格
 document.addEventListener('keydown', e=>{
     if(e.code === 'Space'){
         e.preventDefault();
