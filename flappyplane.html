@@ -2,61 +2,83 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 手机适配核心 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Flappy Plane</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
         body {
             background: #1a1a2e;
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
         }
         #header {
+            width: 92%;
+            max-width: 420px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            width: 100%;
-            max-width: 420px;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
-        #title { color: #4ade80; font-size: 22px; text-decoration: none; }
+        #title { 
+            color: #4ade80; 
+            font-size: 18px; 
+            text-decoration: none; 
+        }
         #backBtn {
-            background: #4a4a6a; color: #fff; border: none;
-            padding: 7px 18px; border-radius: 6px; cursor: pointer; font-size: 13px;
+            background: #4a4a6a; 
+            color: #fff; 
+            border: none;
+            padding: 6px 14px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 13px;
             text-decoration: none;
-        }
-        canvas {
-            border: 2px solid #3a3a5a;
-            border-radius: 10px;
-            display: block;
-            cursor: pointer;
         }
         #infoBar {
             display: flex;
             justify-content: center;
-            gap: 40px;
-            margin-bottom: 12px;
-            width: 100%;
+            gap: 30px;
+            margin-bottom: 10px;
+            width: 92%;
             max-width: 420px;
         }
         #scoreDisplay, #bestDisplay {
             background: #1e1e38;
             border: 1px solid #3a3a5a;
             border-radius: 8px;
-            padding: 8px 24px;
+            padding: 6px 20px;
             color: #4ade80;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             text-align: center;
         }
         #bestDisplay { color: #fbbf24; }
+
+        /* 画布自适应，等比例缩放 */
+        #gameCanvas {
+            border: 2px solid #3a3a5a;
+            border-radius: 10px;
+            display: block;
+            /* 手机自动缩放到屏幕宽度 */
+            max-width: 92vw;
+            height: auto;
+            cursor: pointer;
+            touch-action: none; /* 禁止手机滑动默认行为 */
+        }
         #hint {
             color: #888;
             font-size: 12px;
-            margin-top: 10px;
+            margin-top: 8px;
             text-align: center;
         }
     </style>
@@ -70,9 +92,11 @@
         <div id="scoreDisplay">🏆 0</div>
         <div id="bestDisplay">👑 0</div>
     </div>
+
     <canvas id="gameCanvas" width="400" height="560"></canvas>
+
     <div id="hint">
-        <span>点击</span> 或 <span>空格键</span> 让飞机飞起来
+        点击 或 空格键 让飞机飞起来
     </div>
 
 <script>
@@ -87,19 +111,14 @@ const PIPE_GAP = 165;
 const PIPE_SPEED = 2.5;
 const PIPE_INTERVAL = 110;
 
-// 图片名保持不变
 const PLANE_IMG_SRC = '飞机_clean.png';
 const TOWER_IMG_SRC = '塔_nobg.png';
 
-// 飞机尺寸
 const PLANE_W = 70;
 const PLANE_H = 35;
 const BIRD_RADIUS = 18;
-
-// 塔宽度
 const TOWER_W = 60;
 
-// 加载图片
 const planeImg = new Image();
 const towerImg = new Image();
 planeImg.src = PLANE_IMG_SRC;
@@ -109,6 +128,7 @@ let bird, pipes, score, best, gameState;
 let frameCount = 0;
 let startFloat = 0;
 let animId;
+let particles = [];
 
 const GAME_STATE = {
     READY: 'ready',
@@ -119,18 +139,55 @@ const GAME_STATE = {
 best = +localStorage.getItem('flappyBest') || 0;
 bestDisplay.textContent = `👑 ${best}`;
 
+// 爆炸粒子
+function createExplosion(x,y){
+    particles = [];
+    for(let i=0;i<15;i++){
+        let ang = Math.random()*Math.PI*2;
+        let spd = 1+Math.random()*2;
+        particles.push({
+            x:x, y:y,
+            vx:Math.cos(ang)*spd,
+            vy:Math.sin(ang)*spd,
+            r:3+Math.random()*4,
+            life:1,
+            decay:0.025
+        });
+    }
+}
+function updateParticles(){
+    for(let i=particles.length-1;i>=0;i--){
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        if(p.life<=0) particles.splice(i,1);
+    }
+}
+function drawParticles(){
+    for(let p of particles){
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = "#ff6633";
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
 function init() {
     bird = { x: 70, y: canvas.height / 2, vy: 0, rot: 0 };
     pipes = [];
     score = 0;
     frameCount = 0;
+    particles = [];
     gameState = GAME_STATE.READY;
     scoreDisplay.textContent = `🏆 0`;
     cancelAnimationFrame(animId);
     loop();
 }
 
-// 待机飞机
 function drawReadyPlane() {
     startFloat += 0.06;
     let fy = Math.sin(startFloat) * 6;
@@ -139,7 +196,6 @@ function drawReadyPlane() {
     ctx.drawImage(planeImg, x, y, PLANE_W, PLANE_H);
 }
 
-// 游戏飞机
 function drawPlane() {
     ctx.save();
     ctx.translate(bird.x, bird.y);
@@ -148,17 +204,15 @@ function drawPlane() {
     ctx.restore();
 }
 
-// 关键：上塔翻转倒置，下塔正常
+// 上塔倒置 下塔正常
 function drawPipes() {
     for(let p of pipes){
-        // 上塔：垂直翻转倒过来
         ctx.save();
         ctx.translate(p.x + TOWER_W/2, p.topH);
-        ctx.scale(1, -1); // 垂直翻转
+        ctx.scale(1, -1);
         ctx.drawImage(towerImg, -TOWER_W/2, 0, TOWER_W, p.topH);
         ctx.restore();
 
-        // 下塔：正常正向
         ctx.drawImage(towerImg, p.x, p.bottomY, TOWER_W, canvas.height - p.bottomY);
     }
 }
@@ -179,6 +233,7 @@ function draw() {
     }else if(gameState === GAME_STATE.GAME_OVER){
         drawPipes();
         drawPlane();
+        drawParticles();
         ctx.fillStyle = '#ff5555';
         ctx.font = '24px Microsoft YaHei';
         ctx.textAlign = 'center';
@@ -245,10 +300,12 @@ function update() {
 
 function gameOver(){
     gameState = GAME_STATE.GAME_OVER;
+    createExplosion(bird.x, bird.y);
 }
 
 function loop() {
     update();
+    if(gameState === GAME_STATE.GAME_OVER) updateParticles();
     draw();
     animId = requestAnimationFrame(loop);
 }
@@ -264,10 +321,18 @@ function flap(){
     }
 }
 
+// 手机点击、电脑点击
 canvas.addEventListener('click', flap);
+// 手机触摸也生效
+canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    flap();
+});
+// 电脑空格
 document.addEventListener('keydown', e=>{
     if(e.code === 'Space'){
         e.preventDefault();
+        flap();
     }
 });
 
