@@ -102,8 +102,9 @@ const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('scoreDisplay');
 const bestDisplay = document.getElementById('bestDisplay');
 
-const GRAVITY = 0.3;
-const FLAP = -6.5;
+// ========== 优化飞行参数：解决飞太高撞顶 ==========
+const GRAVITY = 0.28;        // 减小重力，下降更平缓
+const FLAP = -5.5;           // 减小上升力度，不会猛升
 const PIPE_GAP = 165;
 const PIPE_SPEED = 2.5;
 const PIPE_INTERVAL = 110;
@@ -113,7 +114,7 @@ const TOWER_IMG_SRC = '塔_nobg.png';
 
 const PLANE_W = 70;
 const PLANE_H = 35;
-const BIRD_RADIUS = 18;
+const BIRD_RADIUS = 16;      // 缩小碰撞半径，增加容错率
 const TOWER_W = 60;
 
 const planeImg = new Image();
@@ -125,6 +126,7 @@ let bird, pipes, score, best, gameState;
 let frameCount = 0;
 let startFloat = 0;
 let animId;
+let isExploding = false;     // 新增：爆炸动画播放锁
 
 // 粒子类型：火焰、浓烟、飞机碎片
 let fireParticles = [];
@@ -220,6 +222,11 @@ function updateAllParticles() {
         p.life -= 0.018;
         if(p.life <= 0) planeFragments.splice(i,1);
     }
+
+    // ========== 新增：动画播放完毕，解锁重开 ==========
+    if(fireParticles.length === 0 && smokeParticles.length === 0 && planeFragments.length === 0){
+        isExploding = false;
+    }
 }
 
 function drawAllParticles() {
@@ -268,6 +275,7 @@ function init() {
     smokeParticles = [];
     planeFragments = [];
     gameState = GAME_STATE.READY;
+    isExploding = false;  // 重置爆炸锁
     scoreDisplay.textContent = `🏆 0`;
     cancelAnimationFrame(animId);
     loop();
@@ -325,7 +333,9 @@ function draw() {
         ctx.fillText('毁了啊！', canvas.width/2, canvas.height/2 - 40);
         ctx.fillStyle = '#fff';
         ctx.font = '16px Microsoft YaHei';
-        ctx.fillText('点击重新飞行', canvas.width/2, canvas.height/2);
+        // 动画未播放完时提示
+        const text = isExploding ? '等待爆炸结束...' : '点击重新飞行';
+        ctx.fillText(text, canvas.width/2, canvas.height/2);
     }
 }
 
@@ -385,6 +395,7 @@ function update() {
 
 function gameOver(){
     gameState = GAME_STATE.GAME_OVER;
+    isExploding = true;  // 开启爆炸动画锁
     createRealExplosion(bird.x, bird.y);
 }
 
@@ -395,7 +406,11 @@ function loop() {
     animId = requestAnimationFrame(loop);
 }
 
+// ========== 核心修改：爆炸期间禁止操作 ==========
 function flap(){
+    // 爆炸动画没放完，点击无效
+    if(isExploding) return;
+
     if(gameState === GAME_STATE.READY){
         gameState = GAME_STATE.PLAYING;
     }else if(gameState === GAME_STATE.PLAYING){
