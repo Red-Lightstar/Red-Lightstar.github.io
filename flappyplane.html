@@ -87,16 +87,16 @@ const PIPE_GAP = 165;
 const PIPE_SPEED = 2.5;
 const PIPE_INTERVAL = 110;
 
-// 图片配置
+// 图片名保持不变
 const PLANE_IMG_SRC = '飞机_clean.png';
 const TOWER_IMG_SRC = '塔_nobg.png';
 
-// 飞机大小
-const PLANE_W = 50;
-const PLANE_H = 30;
+// 飞机尺寸
+const PLANE_W = 70;
+const PLANE_H = 35;
 const BIRD_RADIUS = 18;
 
-// 塔大小
+// 塔宽度
 const TOWER_W = 60;
 
 // 加载图片
@@ -130,30 +130,35 @@ function init() {
     loop();
 }
 
-// 待机界面 只画飞机图片
+// 待机飞机
 function drawReadyPlane() {
     startFloat += 0.06;
     let fy = Math.sin(startFloat) * 6;
-    let x = bird.x - PLANE_W/2;
-    let y = bird.y + fy - PLANE_H/2;
+    let x = bird.x - PLANE_W / 2;
+    let y = bird.y + fy - PLANE_H / 2;
     ctx.drawImage(planeImg, x, y, PLANE_W, PLANE_H);
 }
 
-// 游戏中 飞机图片+旋转
+// 游戏飞机
 function drawPlane() {
     ctx.save();
     ctx.translate(bird.x, bird.y);
     ctx.rotate(bird.rot * Math.PI / 180);
-    ctx.drawImage(planeImg, -PLANE_W/2, -PLANE_H/2, PLANE_W, PLANE_H);
+    ctx.drawImage(planeImg, -PLANE_W / 2, -PLANE_H / 2, PLANE_W, PLANE_H);
     ctx.restore();
 }
 
-// 画塔（上下管道都用塔图片）
+// 关键：上塔翻转倒置，下塔正常
 function drawPipes() {
     for(let p of pipes){
-        // 上塔
-        ctx.drawImage(towerImg, p.x, 0, TOWER_W, p.topH);
-        // 下塔
+        // 上塔：垂直翻转倒过来
+        ctx.save();
+        ctx.translate(p.x + TOWER_W/2, p.topH);
+        ctx.scale(1, -1); // 垂直翻转
+        ctx.drawImage(towerImg, -TOWER_W/2, 0, TOWER_W, p.topH);
+        ctx.restore();
+
+        // 下塔：正常正向
         ctx.drawImage(towerImg, p.x, p.bottomY, TOWER_W, canvas.height - p.bottomY);
     }
 }
@@ -192,7 +197,6 @@ function update() {
     bird.y += bird.vy;
     bird.rot = Math.min(80, bird.vy * 2.5);
 
-    // 生成塔
     if(frameCount % PIPE_INTERVAL === 0){
         let topH = Math.random() * (canvas.height - PIPE_GAP - 120) + 30;
         pipes.push({
@@ -203,7 +207,6 @@ function update() {
         });
     }
 
-    // 移动塔
     for(let i = pipes.length - 1; i >= 0; i--){
         let p = pipes[i];
         p.x -= PIPE_SPEED;
@@ -212,7 +215,6 @@ function update() {
             continue;
         }
 
-        // 计分
         if(!p.scored && p.x + TOWER_W < bird.x){
             p.scored = true;
             score++;
@@ -224,7 +226,6 @@ function update() {
             }
         }
 
-        // 碰撞
         let bx = bird.x - BIRD_RADIUS;
         let by = bird.y - BIRD_RADIUS;
         let bw = BIRD_RADIUS * 2;
@@ -267,7 +268,6 @@ canvas.addEventListener('click', flap);
 document.addEventListener('keydown', e=>{
     if(e.code === 'Space'){
         e.preventDefault();
-        flap();
     }
 });
 
