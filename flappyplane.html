@@ -82,7 +82,7 @@
 </head>
 <body>
     <div id="header">
-        <a href="index.html" id="title">Flappy Plane</a>
+        <a href="index.html" id="title">1Flappy Plane</a>
         <a href="index.html" id="backBtn">返回主页</a>
     </div>
     <div id="infoBar">
@@ -112,9 +112,9 @@ let PIPE_SPEED = 2.5;
 
 // ========== 手机端优化速度（更柔和）==========
 if (isMobile) {
-    GRAVITY = 0.22;      // 下降更平缓
+    GRAVITY = 0.20;      // 下降更平缓
     FLAP = -4.8;         // 上升力度减小，避免撞顶
-    PIPE_SPEED = 2.0;    // 管道移动稍慢，反应时间更多
+    PIPE_SPEED = 1.5;    // 管道移动稍慢，反应时间更多
 }
 
 const PIPE_GAP = 165;
