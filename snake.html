@@ -37,6 +37,8 @@
             border-radius: 20px;
             overflow: hidden;
             box-shadow: 0 0 0 2px #2a2a4a;
+            display: flex;
+            justify-content: center;
         }
 
         canvas {
@@ -166,16 +168,19 @@
             text-shadow: 0 0 5px #22c55e;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 550px) {
             .game-btn {
-                padding: 6px 20px;
-                font-size: 0.9rem;
+                padding: 6px 18px;
+                font-size: 0.85rem;
             }
             .info-panel {
-                padding: 8px 20px;
+                padding: 8px 18px;
             }
             #score {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
+            }
+            .game-title {
+                font-size: 1.3rem;
             }
         }
     </style>
@@ -183,7 +188,7 @@
 <body>
 
 <div class="header-row">
-    <div class="game-title">🐍 贪吃蛇</div>
+    <div class="game-title">🐍 贪吃蛇 /div>
     <a href="index.html" class="back-link" id="backBtn">← 返回首页</a>
 </div>
 
@@ -204,29 +209,26 @@
 </div>
 
 <div class="hint-text">
-    🖱️ 键盘方向键 或 在游戏区域滑动手指 → 控制小蛇
+    🖱️ 键盘方向键 或 在游戏区域滑动手指 → 控制小蛇 &nbsp;&nbsp;|&nbsp;&nbsp; 
 </div>
 
 <script>
     (function(){
-        // ---------- 游戏配置 ----------
-        const GRID_SIZE = 20;          // 每个格子像素
-        const GRID_COLS = 30;
-        const GRID_ROWS = 25;
+        // ---------- 动态尺寸配置 ----------
+        const BASE_SIZE = 22;            // 每个格子像素 (稍大一点，视觉舒适)
+        let GRID_COLS = 28;              // 默认电脑值，稍后动态调整
+        let GRID_ROWS = 22;
         
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const livesEl = document.getElementById('lives');
-        const startBtn = document.getElementById('startBtn');
-        const resetBtn = document.getElementById('resetBtn');
-
-        canvas.width = GRID_COLS * GRID_SIZE;
-        canvas.height = GRID_ROWS * GRID_SIZE;
+        // 游戏全局变量
+        let canvas = document.getElementById('gameCanvas');
+        let ctx = canvas.getContext('2d');
+        let scoreEl = document.getElementById('score');
+        let livesEl = document.getElementById('lives');
+        let startBtn = document.getElementById('startBtn');
+        let resetBtn = document.getElementById('resetBtn');
         
-        // 游戏状态
         let snake = [];
-        let food = { x: 15, y: 12 };
+        let food = { x: 12, y: 10 };
         let dx = 1, dy = 0;
         let nextDx = 1, nextDy = 0;
         let score = 0;
@@ -234,6 +236,99 @@
         let isRunning = false;
         let gameInterval = null;
         let isGameOverFlag = false;
+        
+        // ---------- 根据设备屏幕智能设定网格大小 (电脑范围更大，手机适当缩小) ----------
+        function updateGridByScreen() {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            // 手机竖屏或小屏设备 (宽度 <= 768px 或者 宽度<高度 视为移动优先)
+            const isMobile = screenWidth <= 768 || (screenWidth < 900 && screenHeight > screenWidth);
+            
+            if (isMobile) {
+                // 手机: 网格小巧，便于触摸，不易误触
+                GRID_COLS = 20;
+                GRID_ROWS = 18;
+            } else {
+                // 电脑/平板: 较大区域，挑战性更强
+                // 根据宽度微调，确保画布宽度不超过视口98%
+                let maxCols = Math.floor((screenWidth * 0.85) / BASE_SIZE);
+                let maxRows = Math.floor((screenHeight * 0.65) / BASE_SIZE);
+                GRID_COLS = Math.min(36, Math.max(28, maxCols));
+                GRID_ROWS = Math.min(28, Math.max(20, maxRows));
+                // 保持比例不太离谱
+                if (GRID_COLS > 38) GRID_COLS = 36;
+                if (GRID_ROWS > 30) GRID_ROWS = 26;
+            }
+            // 确保最小尺寸
+            GRID_COLS = Math.max(16, GRID_COLS);
+            GRID_ROWS = Math.max(14, GRID_ROWS);
+            
+            // 更新canvas尺寸
+            canvas.width = GRID_COLS * BASE_SIZE;
+            canvas.height = GRID_ROWS * BASE_SIZE;
+        }
+        
+        // 重新设定画布并完全重置游戏状态 (清空计时器，重置全部)
+        function resetGameWithNewGrid() {
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
+            isRunning = false;
+            
+            // 重置分数生命
+            score = 0;
+            lives = 3;
+            updateScoreUI();
+            updateLivesDisplay();
+            
+            // 重新定位蛇 (居中)
+            const centerX = Math.floor(GRID_COLS / 2);
+            const centerY = Math.floor(GRID_ROWS / 2);
+            snake = [
+                { x: centerX, y: centerY },
+                { x: centerX - 1, y: centerY },
+                { x: centerX - 2, y: centerY }
+            ];
+            dx = 1;
+            dy = 0;
+            nextDx = 1;
+            nextDy = 0;
+            
+            // 生成有效食物
+            spawnFoodValid();
+            
+            // 重绘画板
+            drawGrid();
+            drawFood();
+            drawSnake();
+            
+            startBtn.disabled = false;
+            startBtn.textContent = '▶ 开始游戏';
+        }
+        
+        // 确保食物不与蛇重叠
+        function spawnFoodValid() {
+            const maxAttempts = 3000;
+            for(let i=0; i<maxAttempts; i++){
+                const randX = Math.floor(Math.random() * GRID_COLS);
+                const randY = Math.floor(Math.random() * GRID_ROWS);
+                if(!snake.some(segment => segment.x === randX && segment.y === randY)){
+                    food = { x: randX, y: randY };
+                    return true;
+                }
+            }
+            // 暴力扫描
+            for(let y=0; y<GRID_ROWS; y++){
+                for(let x=0; x<GRID_COLS; x++){
+                    if(!snake.some(s => s.x === x && s.y === y)){
+                        food = { x, y };
+                        return true;
+                    }
+                }
+            }
+            return false; // 全满胜利
+        }
         
         function updateLivesDisplay() {
             let hearts = '';
@@ -246,157 +341,27 @@
             scoreEl.textContent = score;
         }
         
-        // ---------- 精致网格 ----------
+        // ---------- 精美绘图函数 ----------
         function drawGrid() {
             ctx.fillStyle = '#0f0f23';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = '#1e1e38';
-            ctx.lineWidth = 0.6;
+            ctx.lineWidth = 0.8;
             for (let i = 0; i <= GRID_COLS; i++) {
                 ctx.beginPath();
-                ctx.moveTo(i * GRID_SIZE, 0);
-                ctx.lineTo(i * GRID_SIZE, canvas.height);
+                ctx.moveTo(i * BASE_SIZE, 0);
+                ctx.lineTo(i * BASE_SIZE, canvas.height);
                 ctx.stroke();
             }
             for (let i = 0; i <= GRID_ROWS; i++) {
                 ctx.beginPath();
-                ctx.moveTo(0, i * GRID_SIZE);
-                ctx.lineTo(canvas.width, i * GRID_SIZE);
+                ctx.moveTo(0, i * BASE_SIZE);
+                ctx.lineTo(canvas.width, i * BASE_SIZE);
                 ctx.stroke();
             }
         }
         
-        // 绘制小蛇 (圆润翠绿 + 灵动大眼)
-        function drawSnake() {
-            snake.forEach((seg, idx) => {
-                const isHead = idx === 0;
-                const x = seg.x * GRID_SIZE;
-                const y = seg.y * GRID_SIZE;
-                const radius = 5;
-                ctx.fillStyle = isHead ? '#2ecc71' : '#4ade80';
-                ctx.shadowBlur = 0;
-                ctx.beginPath();
-                ctx.roundRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2, radius);
-                ctx.fill();
-                if(isHead){
-                    ctx.fillStyle = '#ffffff';
-                    const eyeSize = 3;
-                    if(dx === 1) { // 右
-                        ctx.fillRect(x + GRID_SIZE - 7, y + 5, eyeSize, eyeSize);
-                        ctx.fillRect(x + GRID_SIZE - 7, y + GRID_SIZE - 9, eyeSize, eyeSize);
-                    } else if(dx === -1) { // 左
-                        ctx.fillRect(x + 4, y + 5, eyeSize, eyeSize);
-                        ctx.fillRect(x + 4, y + GRID_SIZE - 9, eyeSize, eyeSize);
-                    } else if(dy === -1) { // 上
-                        ctx.fillRect(x + 5, y + 4, eyeSize, eyeSize);
-                        ctx.fillRect(x + GRID_SIZE - 9, y + 4, eyeSize, eyeSize);
-                    } else { // 下
-                        ctx.fillRect(x + 5, y + GRID_SIZE - 8, eyeSize, eyeSize);
-                        ctx.fillRect(x + GRID_SIZE - 9, y + GRID_SIZE - 8, eyeSize, eyeSize);
-                    }
-                    ctx.fillStyle = '#000000';
-                    if(dx === 1) {
-                        ctx.fillRect(x + GRID_SIZE - 8, y + 5, 2, 2);
-                        ctx.fillRect(x + GRID_SIZE - 8, y + GRID_SIZE - 9, 2, 2);
-                    } else if(dx === -1) {
-                        ctx.fillRect(x + 5, y + 5, 2, 2);
-                        ctx.fillRect(x + 5, y + GRID_SIZE - 9, 2, 2);
-                    } else if(dy === -1) {
-                        ctx.fillRect(x + 6, y + 4, 2, 2);
-                        ctx.fillRect(x + GRID_SIZE - 9, y + 4, 2, 2);
-                    } else {
-                        ctx.fillRect(x + 6, y + GRID_SIZE - 8, 2, 2);
-                        ctx.fillRect(x + GRID_SIZE - 9, y + GRID_SIZE - 8, 2, 2);
-                    }
-                }
-            });
-        }
-        
-        // ---------- 超写实苹果绘制 (红润光泽、立体果梗、鲜嫩叶片) ----------
-        function drawApple(px, py) {
-            const cx = px * GRID_SIZE + GRID_SIZE/2;
-            const cy = py * GRID_SIZE + GRID_SIZE/2;
-            const radius = GRID_SIZE/2 - 3;   // 大约7px半径，足够精致
-            
-            // 苹果主体：两层径向渐变，立体感十足
-            const gradMain = ctx.createRadialGradient(cx-3, cy-2, 2, cx, cy, radius);
-            gradMain.addColorStop(0, '#ff5e5e');
-            gradMain.addColorStop(0.5, '#e33b3b');
-            gradMain.addColorStop(1, '#aa2e2e');
-            ctx.fillStyle = gradMain;
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, Math.PI*2);
-            ctx.fill();
-            
-            // 苹果底部轻微凹陷阴影
-            ctx.fillStyle = '#7a1f1f';
-            ctx.beginPath();
-            ctx.ellipse(cx, cy+2, radius*0.3, radius*0.12, 0, 0, Math.PI*2);
-            ctx.fill();
-            
-            // 右上角强高光
-            ctx.fillStyle = '#ffb7b7';
-            ctx.beginPath();
-            ctx.ellipse(cx-2, cy-3, 2.5, 1.8, 0, 0, Math.PI*2);
-            ctx.fill();
-            // 辅助小高光
-            ctx.fillStyle = '#ffe0e0';
-            ctx.beginPath();
-            ctx.ellipse(cx-4, cy-4, 1.5, 1.2, 0, 0, Math.PI*2);
-            ctx.fill();
-            
-            // 苹果梗 (弯曲棕色)
-            ctx.fillStyle = '#6b3e1a';
-            ctx.beginPath();
-            ctx.moveTo(cx-1, cy-radius);
-            ctx.quadraticCurveTo(cx+1, cy-radius-3, cx, cy-radius-5);
-            ctx.lineTo(cx-2, cy-radius-4);
-            ctx.fill();
-            ctx.fillStyle = '#8b5a2b';
-            ctx.beginPath();
-            ctx.moveTo(cx, cy-radius-1);
-            ctx.quadraticCurveTo(cx+2, cy-radius-4, cx+1, cy-radius-6);
-            ctx.lineTo(cx-1, cy-radius-5);
-            ctx.fill();
-            
-            // 绿叶 (两片，带叶脉)
-            ctx.fillStyle = '#6fbf4c';
-            ctx.beginPath();
-            ctx.moveTo(cx+2, cy-radius-2);
-            ctx.quadraticCurveTo(cx+7, cy-radius-7, cx+3, cy-radius-6);
-            ctx.quadraticCurveTo(cx+4, cy-radius-4, cx+2, cy-radius-2);
-            ctx.fill();
-            ctx.fillStyle = '#5aa63b';
-            ctx.beginPath();
-            ctx.moveTo(cx-2, cy-radius-2);
-            ctx.quadraticCurveTo(cx-6, cy-radius-6, cx-3, cy-radius-6);
-            ctx.quadraticCurveTo(cx-2, cy-radius-4, cx-2, cy-radius-2);
-            ctx.fill();
-            
-            // 叶脉细线
-            ctx.beginPath();
-            ctx.strokeStyle = '#438a2b';
-            ctx.lineWidth = 1;
-            ctx.moveTo(cx+2, cy-radius-3);
-            ctx.lineTo(cx+5, cy-radius-6);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(cx-2, cy-radius-3);
-            ctx.lineTo(cx-5, cy-radius-6);
-            ctx.stroke();
-            
-            // 轻微环境反光 (苹果底部微光)
-            ctx.fillStyle = '#ff8c8c66';
-            ctx.beginPath();
-            ctx.ellipse(cx+2, cy+3, 2, 1.2, 0, 0, Math.PI*2);
-            ctx.fill();
-        }
-        
-        function drawFood() {
-            drawApple(food.x, food.y);
-        }
-        
-        // roundRect 工具 (保持兼容)
+        // 圆角矩形辅助
         if (!CanvasRenderingContext2D.prototype.roundRect) {
             CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
                 if (w < 2 * r) r = w / 2;
@@ -414,26 +379,132 @@
             };
         }
         
-        // 生成食物 (避开蛇身)
-        function spawnFood() {
-            const maxAttempts = 3000;
-            for(let i=0; i<maxAttempts; i++){
-                const randX = Math.floor(Math.random() * GRID_COLS);
-                const randY = Math.floor(Math.random() * GRID_ROWS);
-                if(!snake.some(segment => segment.x === randX && segment.y === randY)){
-                    food = { x: randX, y: randY };
-                    return true;
-                }
-            }
-            for(let y=0; y<GRID_ROWS; y++){
-                for(let x=0; x<GRID_COLS; x++){
-                    if(!snake.some(s => s.x === x && s.y === y)){
-                        food = { x, y };
-                        return true;
+        function drawSnake() {
+            snake.forEach((seg, idx) => {
+                const isHead = idx === 0;
+                const x = seg.x * BASE_SIZE;
+                const y = seg.y * BASE_SIZE;
+                const radius = 5;
+                ctx.fillStyle = isHead ? '#2ecc71' : '#4ade80';
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.roundRect(x + 1, y + 1, BASE_SIZE - 2, BASE_SIZE - 2, radius);
+                ctx.fill();
+                if(isHead){
+                    ctx.fillStyle = '#ffffff';
+                    const eyeSize = 3;
+                    if(dx === 1) { // 右
+                        ctx.fillRect(x + BASE_SIZE - 7, y + 5, eyeSize, eyeSize);
+                        ctx.fillRect(x + BASE_SIZE - 7, y + BASE_SIZE - 9, eyeSize, eyeSize);
+                    } else if(dx === -1) { // 左
+                        ctx.fillRect(x + 4, y + 5, eyeSize, eyeSize);
+                        ctx.fillRect(x + 4, y + BASE_SIZE - 9, eyeSize, eyeSize);
+                    } else if(dy === -1) { // 上
+                        ctx.fillRect(x + 5, y + 4, eyeSize, eyeSize);
+                        ctx.fillRect(x + BASE_SIZE - 9, y + 4, eyeSize, eyeSize);
+                    } else { // 下
+                        ctx.fillRect(x + 5, y + BASE_SIZE - 8, eyeSize, eyeSize);
+                        ctx.fillRect(x + BASE_SIZE - 9, y + BASE_SIZE - 8, eyeSize, eyeSize);
+                    }
+                    ctx.fillStyle = '#000000';
+                    if(dx === 1) {
+                        ctx.fillRect(x + BASE_SIZE - 8, y + 5, 2, 2);
+                        ctx.fillRect(x + BASE_SIZE - 8, y + BASE_SIZE - 9, 2, 2);
+                    } else if(dx === -1) {
+                        ctx.fillRect(x + 5, y + 5, 2, 2);
+                        ctx.fillRect(x + 5, y + BASE_SIZE - 9, 2, 2);
+                    } else if(dy === -1) {
+                        ctx.fillRect(x + 6, y + 4, 2, 2);
+                        ctx.fillRect(x + BASE_SIZE - 9, y + 4, 2, 2);
+                    } else {
+                        ctx.fillRect(x + 6, y + BASE_SIZE - 8, 2, 2);
+                        ctx.fillRect(x + BASE_SIZE - 9, y + BASE_SIZE - 8, 2, 2);
                     }
                 }
-            }
-            return false; // 全满胜利
+            });
+        }
+        
+        // 精致红苹果 (立体果梗, 鲜绿叶)
+        function drawApple(px, py) {
+            const cx = px * BASE_SIZE + BASE_SIZE/2;
+            const cy = py * BASE_SIZE + BASE_SIZE/2;
+            const radius = BASE_SIZE/2 - 3;
+            
+            const gradMain = ctx.createRadialGradient(cx-3, cy-2, 2, cx, cy, radius);
+            gradMain.addColorStop(0, '#ff5e5e');
+            gradMain.addColorStop(0.5, '#e33b3b');
+            gradMain.addColorStop(1, '#aa2e2e');
+            ctx.fillStyle = gradMain;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#7a1f1f';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy+2, radius*0.3, radius*0.12, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ffb7b7';
+            ctx.beginPath();
+            ctx.ellipse(cx-2, cy-3, 2.5, 1.8, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#ffe0e0';
+            ctx.beginPath();
+            ctx.ellipse(cx-4, cy-4, 1.5, 1.2, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // 果梗
+            ctx.fillStyle = '#6b3e1a';
+            ctx.beginPath();
+            ctx.moveTo(cx-1, cy-radius);
+            ctx.quadraticCurveTo(cx+1, cy-radius-3, cx, cy-radius-5);
+            ctx.lineTo(cx-2, cy-radius-4);
+            ctx.fill();
+            ctx.fillStyle = '#8b5a2b';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy-radius-1);
+            ctx.quadraticCurveTo(cx+2, cy-radius-4, cx+1, cy-radius-6);
+            ctx.lineTo(cx-1, cy-radius-5);
+            ctx.fill();
+            
+            // 绿叶
+            ctx.fillStyle = '#6fbf4c';
+            ctx.beginPath();
+            ctx.moveTo(cx+2, cy-radius-2);
+            ctx.quadraticCurveTo(cx+7, cy-radius-7, cx+3, cy-radius-6);
+            ctx.quadraticCurveTo(cx+4, cy-radius-4, cx+2, cy-radius-2);
+            ctx.fill();
+            ctx.fillStyle = '#5aa63b';
+            ctx.beginPath();
+            ctx.moveTo(cx-2, cy-radius-2);
+            ctx.quadraticCurveTo(cx-6, cy-radius-6, cx-3, cy-radius-6);
+            ctx.quadraticCurveTo(cx-2, cy-radius-4, cx-2, cy-radius-2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.strokeStyle = '#438a2b';
+            ctx.lineWidth = 1;
+            ctx.moveTo(cx+2, cy-radius-3);
+            ctx.lineTo(cx+5, cy-radius-6);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx-2, cy-radius-3);
+            ctx.lineTo(cx-5, cy-radius-6);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#ff8c8c66';
+            ctx.beginPath();
+            ctx.ellipse(cx+2, cy+3, 2, 1.2, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+        
+        function drawFood() {
+            drawApple(food.x, food.y);
+        }
+        
+        // ---------- 游戏逻辑 ----------
+        function spawnFood() {
+            return spawnFoodValid();
         }
         
         function resetSnakePosition() {
@@ -600,6 +671,8 @@
             drawSnake();
         }
         
+        // 速度调整：从140ms 改为 185ms，移动更舒适，不眩晕
+        const GAME_SPEED_MS = 185;
         function gameLoop() {
             if(!isRunning) return;
             updateGame();
@@ -615,14 +688,14 @@
                 clearInterval(gameInterval);
                 gameInterval = null;
             }
-            fullGameReset();
+            fullGameReset();      // 重置全部数据
             isRunning = true;
             isGameOverFlag = false;
             startBtn.disabled = true;
             startBtn.textContent = '🎮 游戏中...';
             gameInterval = setInterval(() => {
                 gameLoop();
-            }, 140);
+            }, GAME_SPEED_MS);
         }
         
         function newGame() {
@@ -644,7 +717,7 @@
             nextDy = newDy;
         }
         
-        // ---------- 移动端触摸滑动 ----------
+        // ---------- 触摸滑动 (移动端) ----------
         let touchStart = null;
         function handleTouchStart(e) {
             e.preventDefault();
@@ -697,29 +770,46 @@
             setDirection(newDx, newDy);
         }
         
-        function initialDraw() {
-            drawGrid();
+        // 初始绘制和完整系统初始化 (动态布局)
+        function initSystem() {
+            updateGridByScreen();         // 根据屏幕确定行列
+            canvas.width = GRID_COLS * BASE_SIZE;
+            canvas.height = GRID_ROWS * BASE_SIZE;
+            // 重置蛇初始位置
             resetSnakePosition();
-            spawnFood();
-            drawSnake();
+            spawnFoodValid();
+            drawGrid();
             drawFood();
+            drawSnake();
+            // 显示开始提示
             ctx.fillStyle = '#6c6c8e';
             ctx.font = 'bold 22px system-ui';
             ctx.textAlign = 'center';
-            ctx.fillText('点击「开始游戏」', canvas.width/2, canvas.height/2 - 10);
+            ctx.fillText(' 点击「开始游戏」', canvas.width/2, canvas.height/2 - 10);
             ctx.font = '14px system-ui';
             ctx.fillStyle = '#aaaacc';
-            ctx.fillText('键盘方向键 / 滑动屏幕控制', canvas.width/2, canvas.height/2 + 25);
+            ctx.fillText('键盘方向键 / 滑动屏幕', canvas.width/2, canvas.height/2 + 25);
+            
+            startBtn.disabled = false;
+            startBtn.textContent = '▶ 开始游戏';
+            // 确保生命显示正确
+            updateLivesDisplay();
+            updateScoreUI();
         }
         
-        // 事件绑定
+        // 挂载事件并启动
         window.addEventListener('load', () => {
-            initialDraw();
+            initSystem();
             startBtn.addEventListener('click', startGame);
             resetBtn.addEventListener('click', () => {
                 if(gameInterval) clearInterval(gameInterval);
                 isRunning = false;
-                newGame();
+                // 重置网格（以防窗口旋转后尺寸需求变化，但仅重置时重新获取屏幕尺寸）
+                updateGridByScreen();
+                canvas.width = GRID_COLS * BASE_SIZE;
+                canvas.height = GRID_ROWS * BASE_SIZE;
+                fullGameReset();
+                startGame();
             });
             document.addEventListener('keydown', handleKeyDown);
             canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
