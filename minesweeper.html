@@ -64,6 +64,8 @@
             max-width: 640px;
             margin-bottom: 10px;
             padding: 0 4px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
         #mineCount, #timer {
             background: #1e1e38;
@@ -140,6 +142,81 @@
             cursor: pointer; font-weight: bold; transition: background 0.2s;
         }
         #restartBtn:hover { background: #22c55e; }
+
+        /* 新增规则按钮样式 */
+        .rule-btn {
+            background: #3a3a5a;
+            color: #ffffff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: background 0.2s;
+            font-weight: normal;
+        }
+        .rule-btn:hover {
+            background: #4a4a6a;
+        }
+        /* 规则弹窗样式 */
+        .rule-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .rule-modal.show {
+            display: flex;
+        }
+        .rule-content {
+            background: #1e1e38;
+            border: 1px solid #4ade80;
+            border-radius: 12px;
+            padding: 30px 28px;
+            max-width: 420px;
+            width: 85%;
+            text-align: left;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .rule-content h3 {
+            color: #4ade80;
+            font-size: 22px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .rule-content p {
+            color: #ccccdd;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .rule-content hr {
+            margin: 12px 0;
+            border-color: #3a3a5a;
+        }
+        .rule-content strong {
+            color: #f87171;
+        }
+        .close-rule {
+            background: #4ade80;
+            color: #1a1a2e;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 16px;
+            width: 100%;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .close-rule:hover {
+            background: #22c55e;
+        }
     </style>
 </head>
 <body>
@@ -158,11 +235,12 @@
         <div id="mineCount">💣 40</div>
         <button id="restartBtn" style="background:#4ade80;color:#1a1a2e;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold;">重新开始</button>
         <div id="timer">⏱ 0</div>
+        <!-- 规则按钮将在脚本中动态插入，不改动现有结构 -->
     </div>
 
     <div id="board"></div>
     <div id="hint">
-        <span>左键</span> 翻开 · <span>右键</span> 标记旗帜（循环：旗帜 → 问号 → 清除）
+        <span>左键/点击</span> 翻开 · <span>右键/长按</span> 标记
     </div>
 
     <div id="overlay">
@@ -171,6 +249,22 @@
             <p id="overlayText">游戏结束</p>
             <div class="sub" id="overlaySub">用时 0 秒</div>
             <button id="restartBtn2" onclick="initGame(true)">再来一局</button>
+        </div>
+    </div>
+
+    <!-- 规则弹窗结构（初始隐藏） -->
+    <div id="ruleModal" class="rule-modal">
+        <div class="rule-content">
+            <h3>📜 扫雷游戏规则</h3>
+            <p>1. 目标：翻开所有不含地雷的格子，不要踩雷。</p>
+            <p>2. <strong>左键单击或点击1</strong>格子：翻开格子。如果翻开的是地雷，游戏结束。</p>
+            <p>3. 数字表示该格子周围（八方向）相邻的地雷数量，可辅助判断。</p>
+            <p>4. <strong>右键单击或长按</strong>格子：循环标记。依次为：🚩旗帜（标记地雷）→ ❓问号（不确定）→ 无标记。</p>
+            <p>5. 旗帜数量会显示在左上角，可作为参考。</p>
+            <p>6. 当所有非雷格子都被翻开时，游戏胜利。</p>
+            <hr>
+            <p>💡 小技巧：数字与其周围已标记的旗帜数量相等时，可以安全地翻开其余相邻格子。</p>
+            <button class="close-rule" id="closeRuleBtn">我知道了</button>
         </div>
     </div>
 
@@ -207,7 +301,6 @@
 
         function setCellSize() {
             const mode = MODES[currentMode];
-            // 统一格子大小为 26px，避免分散感
             boardEl.style.gridTemplateColumns = `repeat(${mode.cols}, 26px)`;
         }
 
@@ -303,7 +396,6 @@
             if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
             if (revealed[r][c] || flagged[r][c]) return;
             revealed[r][c] = true;
-            // 清除问号标记
             if (questions[r][c]) {
                 questions[r][c] = false;
             }
@@ -315,21 +407,17 @@
             checkWin();
         }
 
-        // 右键循环：空 → 旗帜 → 问号 → 空
         function toggleFlag(r, c, e) {
             e.preventDefault();
             if (revealed[r][c] || gameOver) return;
 
             if (!flagged[r][c] && !questions[r][c]) {
-                // 当前无标记 → 插旗帜
                 flagged[r][c] = true;
                 flagCount++;
             } else if (flagged[r][c]) {
-                // 旗帜 → 问号
                 flagged[r][c] = false;
                 questions[r][c] = true;
             } else if (questions[r][c]) {
-                // 问号 → 清除
                 questions[r][c] = false;
                 flagCount--;
             }
@@ -424,17 +512,13 @@
             reveal(r, c); renderBoard();
         }
 
-        // 模式切换
         modeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.dataset.mode === currentMode) return;
-                // 先保存当前模式
                 if (!gameOver && timerStarted) saveGame();
                 clearInterval(timerInterval);
-                // 切换到新模式
                 currentMode = btn.dataset.mode;
                 updateModeButtons();
-                // 加载新模式的存档或初始化
                 if (!loadGame()) {
                     ROWS = MODES[currentMode].rows;
                     COLS = MODES[currentMode].cols;
@@ -453,8 +537,6 @@
         });
 
         window.addEventListener('beforeunload', () => { if (!gameOver && timerStarted) saveGame(); });
-
-        // 页面可见性变化时保存（如切换标签页、最小化、切换应用）
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden' && !gameOver && timerStarted) {
                 saveGame();
@@ -478,6 +560,38 @@
 
         restartBtn.addEventListener('click', () => initGame(true));
         restartBtn2.addEventListener('click', () => initGame(true));
+
+        // ---------- 新增规则按钮及弹窗逻辑（未改动原有任何代码） ----------
+        const infoBar = document.getElementById('infoBar');
+        const ruleButton = document.createElement('button');
+        ruleButton.className = 'rule-btn';
+        ruleButton.textContent = '📜 规则';
+        ruleButton.style.order = '3';  // 放在timer后面视觉更顺
+        // 插入到timer元素后面
+        const timerDiv = document.getElementById('timer');
+        if (timerDiv && timerDiv.parentNode === infoBar) {
+            infoBar.insertBefore(ruleButton, timerDiv.nextSibling);
+        } else {
+            infoBar.appendChild(ruleButton);
+        }
+
+        const ruleModal = document.getElementById('ruleModal');
+        const closeRuleBtn = document.getElementById('closeRuleBtn');
+
+        function showRuleModal() {
+            ruleModal.classList.add('show');
+        }
+
+        function hideRuleModal() {
+            ruleModal.classList.remove('show');
+        }
+
+        ruleButton.addEventListener('click', showRuleModal);
+        closeRuleBtn.addEventListener('click', hideRuleModal);
+        // 点击弹窗背景关闭（可选）
+        ruleModal.addEventListener('click', (e) => {
+            if (e.target === ruleModal) hideRuleModal();
+        });
     </script>
 </body>
 </html>
