@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>贪吃蛇 · 灵动自适应版</title>
+    <title>贪吃蛇</title>
     <style>
         * {
             margin: 0;
@@ -25,16 +25,17 @@
             padding: 16px;
         }
 
+        /* 所有圆角改为0，实现方形边框 */
         .game-container {
             background: #0f0f23;
-            border-radius: 28px;
+            border-radius: 0;      /* 原28px → 0 */
             padding: 12px;
             box-shadow: 0 20px 35px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
         #gameWrapper {
             position: relative;
-            border-radius: 20px;
+            border-radius: 0;      /* 原20px → 0 */
             overflow: hidden;
             box-shadow: 0 0 0 2px #2a2a4a;
             display: flex;
@@ -62,7 +63,7 @@
             background: rgba(10, 10, 20, 0.7);
             backdrop-filter: blur(8px);
             padding: 12px 24px;
-            border-radius: 60px;
+            border-radius: 0;      /* 原60px → 0 */
             border: 1px solid rgba(74, 222, 128, 0.3);
         }
 
@@ -105,7 +106,7 @@
             font-size: 1.1rem;
             font-weight: bold;
             padding: 10px 28px;
-            border-radius: 48px;
+            border-radius: 0;      /* 原48px → 0 */
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
@@ -134,7 +135,7 @@
             text-align: center;
             background: rgba(0,0,0,0.4);
             padding: 6px 14px;
-            border-radius: 60px;
+            border-radius: 0;      /* 原60px → 0 */
         }
 
         .back-link {
@@ -142,7 +143,7 @@
             color: #bbbbff;
             text-decoration: none;
             padding: 6px 16px;
-            border-radius: 30px;
+            border-radius: 0;      /* 原30px → 0 */
             font-size: 0.9rem;
             transition: 0.2s;
             display: inline-flex;
@@ -189,13 +190,13 @@
 <body>
 
 <div class="header-row">
-    <div class="game-title">🐍 贪吃蛇 · 玲珑果园</div>
+    <div class="game-title">贪吃蛇</div>
     <a href="index.html" class="back-link" id="backBtn">← 返回首页</a>
 </div>
 
 <div class="info-panel">
-    <div class="score-box"><span>🍎 得分</span> <span id="score">0</span></div>
-    <div class="lives-box"><span>❤️ 生命</span> <span id="lives">❤️❤️❤️</span></div>
+    <div class="score-box"><span>得分</span> <span id="score">0</span></div>
+    <div class="lives-box"><span>生命</span> <span id="lives">❤️❤️❤️</span></div>
 </div>
 
 <div class="game-container">
@@ -210,7 +211,7 @@
 </div>
 
 <div class="hint-text">
-    🖱️ 键盘方向键 或 在游戏区域滑动手指 → 控制小蛇 &nbsp;&nbsp;|&nbsp;&nbsp; 🐢 舒适节奏，大屏更开阔
+    🖱️ 键盘方向键 或 在游戏区域滑动手指 → 控制小蛇 &nbsp;&nbsp;|&nbsp;&nbsp;
 </div>
 
 <script>
@@ -357,7 +358,7 @@
         }
         
         // ---------- 绘图函数 (精致苹果 + 小蛇) ----------
-        // 圆角矩形工具
+        // 圆角矩形工具 (蛇身保留圆角，但界面边框已方)
         if (!CanvasRenderingContext2D.prototype.roundRect) {
             CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
                 if (w < 2 * r) r = w / 2;
@@ -524,7 +525,7 @@
             ctx.fillStyle = '#6c6c8e';
             ctx.font = 'bold 22px system-ui';
             ctx.textAlign = 'center';
-            ctx.fillText('🍎 点击「开始游戏」', canvas.width/2, canvas.height/2 - 10);
+            ctx.fillText('点击「开始游戏」', canvas.width/2, canvas.height/2 - 10);
             ctx.font = '14px system-ui';
             ctx.fillStyle = '#aaaacc';
             ctx.fillText('键盘方向键 / 滑动屏幕', canvas.width/2, canvas.height/2 + 25);
