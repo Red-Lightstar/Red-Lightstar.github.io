@@ -2,636 +2,569 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>星际 2048</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft Yahei", sans-serif;
+            font-family: 'Segoe UI', 'Microsoft Yahei', sans-serif;
         }
-
         body {
-            background: #0a0e27;
-            background-image: radial-gradient(circle at 50% 50%, #101a40 0%, #050714 100%);
+            background: radial-gradient(circle at 30% 30%, #0c1a3a, #050714);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #fff;
             padding: 20px;
+            color: #fff;
+            user-select: none;
         }
-
         .title {
-            font-size: 36px;
-            margin-bottom: 15px;
-            color: #73c0ff;
-            text-shadow: 0 0 10px #409eff;
+            font-size: 40px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #73c0ff, #409eff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(64, 158, 255, 0.3);
         }
-
-        .info-bar {
-            font-size: 20px;
-            margin: 10px 0;
-            color: #ccc;
+        .info {
             display: flex;
-            gap: 25px;
-            align-items: center;
+            gap: 30px;
+            font-size: 22px;
+            margin-bottom: 15px;
+            background: rgba(20, 30, 60, 0.6);
+            padding: 8px 24px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
         }
-
-        .score {
+        .info span {
             color: #ffd700;
             font-weight: bold;
         }
-
-        .count {
-            color: #ff9800;
-            font-weight: bold;
-        }
-
+        #scoreDisplay { color: #ffd700; }
         .btn-group {
             display: flex;
-            gap: 15px;
-            margin: 15px 0;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
-
-        .base-btn {
-            padding: 12px 24px;
-            font-size: 18px;
-            background: #409eff;
+        .btn {
+            padding: 10px 24px;
             border: none;
+            border-radius: 30px;
+            background: #2a4a7a;
             color: #fff;
-            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
+        .btn:hover { background: #3a6a9a; transform: scale(1.02); }
+        .btn-primary { background: #409eff; }
+        .btn-primary:hover { background: #2a7dcc; }
 
-        .base-btn:hover {
-            background: #2a7dcc;
-        }
-
-        .game-wrapper {
+        #game-wrapper {
             position: relative;
+            touch-action: none;
         }
-
-        #particle-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            border-radius: 15px;
-            z-index: 10;
-        }
-
-        /* 放大游戏主界面 500px，操作更轻松 */
         #game-container {
-            width: 500px;
-            height: 500px;
+            width: 460px;
+            height: 460px;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            gap: 8px;
-            background: rgba(30, 40, 80, 0.5);
-            padding: 12px;
-            border-radius: 15px;
-            box-shadow: 0 0 30px #204080;
-            position: relative;
-            z-index: 2;
+            gap: 12px;
+            background: rgba(20, 30, 60, 0.6);
+            padding: 14px;
+            border-radius: 18px;
+            box-shadow: 0 0 40px rgba(64, 158, 255, 0.2);
+            backdrop-filter: blur(6px);
             touch-action: none;
         }
-
         .cell {
-            border-radius: 10px;
+            background: rgba(40, 60, 100, 0.3);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
-            font-weight: bold;
-            transition: all 0.15s ease;
-            background: rgba(50, 70, 120, 0.4);
-        }
-
-        .cell-hole {
-            background: #000 !important;
-            box-shadow: 0 0 15px #000, inset 0 0 10px #222;
-            color: transparent !important;
-        }
-
-        @keyframes holeEnter {
-            0% {
-                transform: scale(0.2);
-                opacity: 0;
-                box-shadow: 0 0 0 #000;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-                box-shadow: 0 0 15px #000, inset 0 0 10px #222;
-            }
-        }
-        .cell-hole-new {
-            animation: holeEnter 0.4s ease forwards;
-        }
-
-        .cell-2 { background: #234; color: #8cf; }
-        .cell-4 { background: #246; color: #9df; }
-        .cell-8 { background: #268; color: #aff; }
-        .cell-16 { background: #28a; color: #cff; }
-        .cell-32 { background: #3a8; color: #df8; }
-        .cell-64 { background: #4a6; color: #ef8; }
-        .cell-128 { background: #6a4; color: #fd8; }
-        .cell-256 { background: #8a2; color: #fc8; }
-        .cell-512 { background: #a82; color: #fa8; }
-        .cell-1024 { background: #a62; color: #f88; }
-        .cell-2048 { 
-            background: radial-gradient(#ff6, #f80); 
+            font-size: 38px;
+            font-weight: 800;
             color: #fff;
-            box-shadow: 0 0 20px #ff0;
+            transition: 0.1s ease;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+        }
+        /* 数字颜色 */
+        .cell-2 { background: #2a3a5a; color: #b0d0ff; }
+        .cell-4 { background: #2a4a7a; color: #8cb8ff; }
+        .cell-8 { background: #2a6a8a; color: #7fc8ff; }
+        .cell-16 { background: #2a7a9a; color: #6ad4ff; }
+        .cell-32 { background: #3a8a6a; color: #b0ffb0; }
+        .cell-64 { background: #4a8a4a; color: #d0ff80; }
+        .cell-128 { background: #8a7a2a; color: #ffd070; }
+        .cell-256 { background: #b07a2a; color: #ffb050; }
+        .cell-512 { background: #c06a2a; color: #ff9040; }
+        .cell-1024 { background: #c05a3a; color: #ff8860; }
+        .cell-2048 {
+            background: radial-gradient(circle at 30% 30%, #ffcc44, #ff8800);
+            color: #fff;
+            box-shadow: 0 0 30px #ffaa00;
         }
 
-        .game-over-modal {
+        #overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.75);
-            border-radius: 15px;
+            border-radius: 18px;
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            z-index: 20;
+            gap: 20px;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+        #overlay.show { display: flex; }
+        #overlay h2 { font-size: 36px; }
+        #overlay p { font-size: 20px; color: #ccc; }
+
+        /* 粒子画布（装饰） */
+        #particle-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
+            width: 100%; height: 100%;
+            border-radius: 18px;
+            z-index: 5;
         }
 
-        .mask {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 99;
-        }
-        .help-box {
-            width: 90%;
-            max-width: 450px;
-            background: #101a40;
-            border-radius: 15px;
-            padding: 30px;
-            color: #eee;
-            line-height: 1.8;
-            font-size: 18px;
-        }
-        .help-box h3 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #73c0ff;
-            font-size: 24px;
-        }
-        .help-close {
-            width: 100%;
-            margin-top: 25px;
-            padding: 12px;
-            background: #409eff;
-            border: none;
-            color: #fff;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-        }
-
-        /* 移动端适配 */
-        @media (max-width: 520px) {
+        @media (max-width: 500px) {
             #game-container {
-                width: 380px;
-                height: 380px;
+                width: 92vw;
+                height: 92vw;
+                gap: 8px;
+                padding: 10px;
             }
-            .cell {
-                font-size: 26px;
-            }
-            .title {
-                font-size: 28px;
-            }
-            .base-btn {
-                padding: 8px 16px;
-                font-size: 16px;
-            }
+            .cell { font-size: 28px; }
+            .title { font-size: 30px; }
+            .info { font-size: 18px; gap: 16px; }
+            .btn { padding: 8px 16px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
-    <div class="title">星核聚变 2048</div>
-    <div class="info-bar">
-        <span>分数：<span class="score" id="score">0</span></span>
-        <span>有效滑动：<span class="count" id="moveCount">0</span></span>
-        <span>黑洞上限：3</span>
+    <div class="title">✦ 星核 2048 ✦</div>
+    <div class="info">
+        <span>🏆 得分：<span id="scoreDisplay">0</span></span>
+        <span>👑 最高：<span id="bestDisplay">0</span></span>
     </div>
-
     <div class="btn-group">
-        <button class="base-btn" id="helpBtn">游戏说明</button>
-        <button class="base-btn" id="homeBtn">返回游戏中心</button>
-        <button class="base-btn" onclick="initGame()">重新开始</button>
+        <button class="btn btn-primary" id="newGameBtn">🔄 新游戏</button>
+        <button class="btn" id="helpBtn">📖 说明</button>
+        <button class="btn" id="homeBtn">🏠 返回</button>
     </div>
 
-    <div class="game-wrapper">
+    <div id="game-wrapper">
         <canvas id="particle-canvas"></canvas>
         <div id="game-container"></div>
-        <div class="game-over-modal" id="gameOverModal">
-            <div id="overText">游戏结束</div>
-            <button class="base-btn" onclick="initGame()" style="margin-top:20px">重新开始</button>
+        <div id="overlay">
+            <h2 id="overlayTitle">🎉 你赢了！</h2>
+            <p id="overlaySub">得分: 0</p>
+            <button class="btn btn-primary" id="overlayBtn">再来一局</button>
         </div>
     </div>
 
-    <div class="mask" id="helpMask">
-        <div class="help-box">
-            <h3>🎮 游戏说明</h3>
-            <p>1. 操作：键盘方向键 / 手机屏幕滑动</p>
-            <p>2. 规则：相同数字碰撞合并翻倍</p>
-            <p>3. 获胜：合成 <b>2048</b> 即可胜利</p>
-            <p>4. 黑洞机制：每有效滑动10次生成1个黑洞</p>
-            <p>5. 黑洞最多存在3个，超出自动删除最早的</p>
-            <p>6. 黑洞可直接刷新在数字上，强制覆盖</p>
-            <p>7. 数字碰到黑洞会直接消失并结算分数</p>
-            <p>8. 无任何数字移动时，不计入有效滑动</p>
-            <p>9. 合成2048触发粒子爆炸特效与音效</p>
-            <button class="help-close" id="closeHelpBtn">关闭</button>
+    <!-- 简易说明弹窗 -->
+    <div id="helpModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:100;">
+        <div style="background:#101a40; padding:30px; border-radius:20px; max-width:420px; width:90%; color:#eee; line-height:1.8;">
+            <h3 style="color:#73c0ff; text-align:center;">🎮 游戏说明</h3>
+            <p>• 使用 <strong>方向键</strong> 或 <strong>滑动屏幕</strong> 移动方块</p>
+            <p>• 相同数字相遇会 <strong>合并</strong> 为它们的和</p>
+            <p>• 目标是合成 <strong>2048</strong> 方块</p>
+            <p>• 无法移动时游戏结束</p>
+            <button id="closeHelp" style="margin-top:20px; width:100%; padding:12px; background:#409eff; border:none; border-radius:30px; color:#fff; font-size:18px; cursor:pointer;">知道了</button>
         </div>
     </div>
 
     <script>
-        const gameContainer = document.getElementById('game-container');
-        const scoreEl = document.getElementById('score');
-        const moveCountEl = document.getElementById('moveCount');
-        const gameOverModal = document.getElementById('gameOverModal');
-        const overText = document.getElementById('overText');
-        const particleCanvas = document.getElementById('particle-canvas');
-        const ctx = particleCanvas.getContext('2d');
+        (function(){
+            const SIZE = 4;
+            const container = document.getElementById('game-container');
+            const scoreSpan = document.getElementById('scoreDisplay');
+            const bestSpan = document.getElementById('bestDisplay');
+            const overlay = document.getElementById('overlay');
+            const overlayTitle = document.getElementById('overlayTitle');
+            const overlaySub = document.getElementById('overlaySub');
+            const overlayBtn = document.getElementById('overlayBtn');
+            const particleCanvas = document.getElementById('particle-canvas');
+            const ctx = particleCanvas.getContext('2d');
 
-        const helpMask = document.getElementById('helpMask');
-        const helpBtn = document.getElementById('helpBtn');
-        const closeHelpBtn = document.getElementById('closeHelpBtn');
-        const homeBtn = document.getElementById('homeBtn');
+            let grid = [];
+            let score = 0;
+            let best = parseInt(localStorage.getItem('best2048')) || 0;
+            let gameOver = false;
+            let win = false;
+            let particles = [];
+            let animFrame = null;
 
-        const SIZE = 4;
-        const MAX_HOLE = 3;
-        const HOLE_STEP = 10;
-
-        let grid = [];
-        let score = 0;
-        let moveCount = 0;
-        let holeList = [];
-        let newHolePos = null;
-        let isWin = false;
-        let particles = [];
-        let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        function initCanvas() {
-            particleCanvas.width = gameContainer.offsetWidth;
-            particleCanvas.height = gameContainer.offsetHeight;
-        }
-
-        function playSound(type) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            if(type === 'move'){
-                osc.frequency.value = 220;
-                gain.gain.value = 0.1;
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.08);
-            }else if(type === 'merge'){
-                osc.frequency.value = 440;
-                gain.gain.value = 0.12;
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.12);
-            }else if(type === 'boom'){
-                osc.type = 'sawtooth';
-                osc.frequency.value = 120;
-                gain.gain.value = 0.15;
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-                osc.stop(audioCtx.currentTime + 0.5);
+            // 初始化画布尺寸
+            function resizeCanvas() {
+                const rect = container.getBoundingClientRect();
+                particleCanvas.width = rect.width;
+                particleCanvas.height = rect.height;
             }
-        }
+            window.addEventListener('resize', resizeCanvas);
 
-        class Particle {
-            constructor(x,y){
-                this.x=x;this.y=y;
-                this.radius=Math.random()*4+2;
-                this.vx=(Math.random()-0.5)*6;
-                this.vy=(Math.random()-0.5)*6;
-                this.alpha=1;
-                this.color=`hsl(${Math.random()*60+30},100%,60%)`;
+            // 粒子系统
+            function createParticles(x, y, count = 30) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 6;
+                    particles.push({
+                        x, y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 1,
+                        size: 4 + Math.random() * 8,
+                        life: 1,
+                        color: `hsl(${40 + Math.random() * 30}, 100%, 60%)`,
+                        decay: 0.012 + Math.random() * 0.015
+                    });
+                }
+                if (!animFrame) animateParticles();
             }
-            draw(){
-                ctx.save();ctx.globalAlpha=this.alpha;
-                ctx.fillStyle=this.color;
-                ctx.beginPath();ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
-                ctx.fill();ctx.restore();
-            }
-            update(){
-                this.x+=this.vx;this.y+=this.vy;this.alpha-=0.02;
-            }
-        }
-        function boomEffect(){
-            particles=[];
-            let cx=particleCanvas.width/2,cy=particleCanvas.height/2;
-            for(let i=0;i<80;i++) particles.push(new Particle(cx,cy));
-            animateParticles();
-        }
-        function animateParticles(){
-            ctx.clearRect(0,0,particleCanvas.width,particleCanvas.height);
-            for(let i=particles.length-1;i>=0;i--){
-                particles[i].update();particles[i].draw();
-                if(particles[i].alpha<=0) particles.splice(i,1);
-            }
-            if(particles.length>0) requestAnimationFrame(animateParticles);
-        }
 
-        function initGame() {
-            score = 0;
-            moveCount = 0;
-            holeList = [];
-            newHolePos = null;
-            isWin = false;
-            particles = [];
-            scoreEl.innerText = score;
-            moveCountEl.innerText = moveCount;
-            gameOverModal.style.display = 'none';
-
-            grid = Array(SIZE).fill(0).map(()=>Array(SIZE).fill(0));
-            initCanvas();
-            randomNewNum();
-            randomNewNum();
-            renderGrid();
-        }
-
-        function randomNewNum() {
-            let empty = [];
-            for(let i=0;i<SIZE;i++){
-                for(let j=0;j<SIZE;j++){
-                    if(grid[i][j]===0 && !isHole(i,j)){
-                        empty.push({x:i,y:j});
-                    }
+            function animateParticles() {
+                ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+                let alive = false;
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.08;
+                    p.life -= p.decay;
+                    if (p.life <= 0) { particles.splice(i, 1); continue; }
+                    alive = true;
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                if (alive) {
+                    animFrame = requestAnimationFrame(animateParticles);
+                } else {
+                    animFrame = null;
+                    ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
                 }
             }
-            if(empty.length===0) return;
-            let p = empty[Math.floor(Math.random()*empty.length)];
-            grid[p.x][p.y] = Math.random()>0.5 ? 2 : 4;
-        }
 
-        function isHole(x,y){
-            return holeList.some(h=>h.x===x&&h.y===y);
-        }
+            // 音效（极简Web Audio）
+            let audioCtx = null;
+            function playTone(freq, duration, type = 'sine') {
+                try {
+                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                } catch(e) {}
+            }
 
-        function addNewHole() {
-            let canPlace = [];
-            for(let i=0;i<SIZE;i++){
-                for(let j=0;j<SIZE;j++){
-                    if(!isHole(i,j)){
-                        canPlace.push({x:i,y:j});
+            function playMove() { playTone(200, 0.08); }
+            function playMerge() { playTone(400, 0.12); }
+            function playWin() { playTone(600, 0.2, 'square'); }
+
+            // 核心逻辑
+            function initGrid() {
+                grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+                addRandomTile();
+                addRandomTile();
+                updateBest();
+            }
+
+            function addRandomTile() {
+                let empties = [];
+                for (let r = 0; r < SIZE; r++)
+                    for (let c = 0; c < SIZE; c++)
+                        if (grid[r][c] === 0) empties.push({r, c});
+                if (empties.length === 0) return false;
+                const pos = empties[Math.floor(Math.random() * empties.length)];
+                grid[pos.r][pos.c] = Math.random() < 0.9 ? 2 : 4;
+                return true;
+            }
+
+            function render() {
+                container.innerHTML = '';
+                for (let r = 0; r < SIZE; r++) {
+                    for (let c = 0; c < SIZE; c++) {
+                        const val = grid[r][c];
+                        const div = document.createElement('div');
+                        div.className = 'cell' + (val ? ' cell-' + val : '');
+                        div.textContent = val || '';
+                        container.appendChild(div);
                     }
                 }
+                scoreSpan.textContent = score;
+                bestSpan.textContent = best;
+                resizeCanvas();
             }
-            if(canPlace.length===0) return;
 
-            let pos = canPlace[Math.floor(Math.random()*canPlace.length)];
-            newHolePos = pos;
-            holeList.push(pos);
-
-            if(holeList.length > MAX_HOLE){
-                holeList.shift();
+            function updateBest() {
+                if (score > best) {
+                    best = score;
+                    localStorage.setItem('best2048', best);
+                }
+                bestSpan.textContent = best;
             }
-            renderGrid();
-        }
 
-        function renderGrid() {
-            gameContainer.innerHTML = '';
-            for(let i=0;i<SIZE;i++){
-                for(let j=0;j<SIZE;j++){
-                    let cell = document.createElement('div');
-                    cell.className = 'cell';
+            // 移动方向处理（返回是否移动了）
+            function move(direction) {
+                if (gameOver) return false;
+                let moved = false;
+                const oldGrid = grid.map(row => [...row]);
 
-                    if(isHole(i,j)){
-                        cell.classList.add('cell-hole');
-                        if(newHolePos && newHolePos.x === i && newHolePos.y === j){
-                            cell.classList.add('cell-hole-new');
-                            setTimeout(()=> newHolePos = null, 400);
+                // 根据方向遍历
+                const order = [];
+                for (let i = 0; i < SIZE; i++) {
+                    for (let j = 0; j < SIZE; j++) {
+                        order.push({r: i, c: j});
+                    }
+                }
+                // 方向映射
+                const dirMap = {
+                    left: { dr: 0, dc: -1, start: 0, end: SIZE, step: 1 },
+                    right: { dr: 0, dc: 1, start: SIZE-1, end: -1, step: -1 },
+                    up: { dr: -1, dc: 0, start: 0, end: SIZE, step: 1 },
+                    down: { dr: 1, dc: 0, start: SIZE-1, end: -1, step: -1 }
+                };
+                const d = dirMap[direction];
+                if (!d) return false;
+
+                // 收集非零块并合并
+                const visited = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+                const newGrid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+                let mergeScore = 0;
+
+                // 按顺序遍历
+                const rows = [...Array(SIZE).keys()];
+                const cols = [...Array(SIZE).keys()];
+                if (d.dr !== 0) {
+                    // 垂直方向：按行顺序遍历
+                    for (let i = 0; i < SIZE; i++) {
+                        let col = (d.dc === 1) ? i : SIZE - 1 - i;
+                        let list = [];
+                        for (let j = 0; j < SIZE; j++) {
+                            let row = (d.dr === 1) ? j : SIZE - 1 - j;
+                            if (grid[row][col] !== 0) list.push({r: row, c: col, val: grid[row][col]});
                         }
-                    }else{
-                        let val = grid[i][j];
-                        cell.innerText = val||'';
-                        if(val) cell.classList.add(`cell-${val}`);
+                        // 合并
+                        let merged = [];
+                        for (let k = 0; k < list.length; k++) {
+                            if (k+1 < list.length && list[k].val === list[k+1].val) {
+                                merged.push({r: list[k].r, c: list[k].c, val: list[k].val * 2});
+                                mergeScore += list[k].val * 2;
+                                k++; // 跳过下一个
+                            } else {
+                                merged.push({r: list[k].r, c: list[k].c, val: list[k].val});
+                            }
+                        }
+                        // 填入新grid（同一列）
+                        let idx = 0;
+                        for (let j = 0; j < SIZE; j++) {
+                            let row = (d.dr === 1) ? j : SIZE - 1 - j;
+                            if (idx < merged.length) {
+                                newGrid[row][col] = merged[idx].val;
+                                idx++;
+                            } else {
+                                newGrid[row][col] = 0;
+                            }
+                        }
                     }
-                    gameContainer.appendChild(cell);
-                }
-            }
-        }
-
-        function rotate(g){
-            let res = Array(SIZE).fill(0).map(()=>Array(SIZE).fill(0));
-            for(let i=0;i<SIZE;i++)
-                for(let j=0;j<SIZE;j++)
-                    res[j][SIZE-1-i] = g[i][j];
-            return res;
-        }
-
-        // 核心：左移 + 撞黑洞消失 + 消失加分 + 判断是否真的有移动
-        function moveLeft(){
-            if(isWin) return false;
-            let hasRealMove = false;
-
-            for(let i=0;i<SIZE;i++){
-                let row = [];
-                // 先取出本行所有数字
-                for(let j=0;j<SIZE;j++){
-                    if(!isHole(i,j) && grid[i][j]>0){
-                        row.push(grid[i][j]);
-                    }
-                }
-                // 合并相同数字
-                for(let k=0;k<row.length-1;k++){
-                    if(row[k]===row[k+1]){
-                        row[k]*=2;
-                        score+=row[k];
-                        scoreEl.innerText=score;
-                        playSound('merge');
-                        row.splice(k+1,1);
-                    }
-                }
-
-                // 清空本行非黑洞格子
-                for(let j=0;j<SIZE;j++){
-                    if(!isHole(i,j)) grid[i][j]=0;
-                }
-
-                // 向左填充，碰到黑洞直接截断，后面数字撞黑洞消失并加分
-                let idx = 0;
-                for(let j=0;j<SIZE;j++){
-                    if(isHole(i,j)) break; // 碰到黑洞，后面数字全部消失
-                    if(idx < row.length){
-                        grid[i][j] = row[idx++];
-                    }
-                }
-
-                // 没填充进去的数字 = 撞黑洞消失，结算分数
-                while(idx < row.length){
-                    score += row[idx];
-                    scoreEl.innerText = score;
-                    idx++;
-                }
-            }
-
-            // 判断是否有真实位移
-            let oldGrid = JSON.parse(JSON.stringify(grid));
-            for(let i=0;i<SIZE;i++){
-                for(let j=0;j<SIZE;j++){
-                    if(oldGrid[i][j] !== grid[i][j]){
-                        hasRealMove = true;
-                        break;
+                } else {
+                    // 水平方向
+                    for (let i = 0; i < SIZE; i++) {
+                        let row = (d.dr === 1) ? i : SIZE - 1 - i;
+                        let list = [];
+                        for (let j = 0; j < SIZE; j++) {
+                            let col = (d.dc === 1) ? j : SIZE - 1 - j;
+                            if (grid[row][col] !== 0) list.push({r: row, c: col, val: grid[row][col]});
+                        }
+                        let merged = [];
+                        for (let k = 0; k < list.length; k++) {
+                            if (k+1 < list.length && list[k].val === list[k+1].val) {
+                                merged.push({r: list[k].r, c: list[k].c, val: list[k].val * 2});
+                                mergeScore += list[k].val * 2;
+                                k++;
+                            } else {
+                                merged.push({r: list[k].r, c: list[k].c, val: list[k].val});
+                            }
+                        }
+                        let idx = 0;
+                        for (let j = 0; j < SIZE; j++) {
+                            let col = (d.dc === 1) ? j : SIZE - 1 - j;
+                            if (idx < merged.length) {
+                                newGrid[row][col] = merged[idx].val;
+                                idx++;
+                            } else {
+                                newGrid[row][col] = 0;
+                            }
+                        }
                     }
                 }
-            }
-            return hasRealMove;
-        }
 
-        // 修复方向键移动逻辑，每个方向单独处理
-        function moveUp(){
-            if(isWin) return false;
-            grid=rotate(grid);grid=rotate(grid);grid=rotate(grid);
-            let realMoved = moveLeft();
-            grid=rotate(grid);
-            return realMoved;
-        }
-        function moveRight(){
-            if(isWin) return false;
-            grid=rotate(grid);grid=rotate(grid);
-            let realMoved = moveLeft();
-            grid=rotate(grid);grid=rotate(grid);
-            return realMoved;
-        }
-        function moveDown(){
-            if(isWin) return false;
-            grid=rotate(grid);
-            let realMoved = moveLeft();
-            grid=rotate(grid);grid=rotate(grid);grid=rotate(grid);
-            return realMoved;
-        }
-
-        // 统一处理移动逻辑
-        function handleMove(direction){
-            let realMoved = false;
-            switch(direction){
-                case 'left': realMoved = moveLeft(); break;
-                case 'up': realMoved = moveUp(); break;
-                case 'right': realMoved = moveRight(); break;
-                case 'down': realMoved = moveDown(); break;
-            }
-
-            // 只有真实移动了，才计数、生成黑洞
-            if(realMoved){
-                playSound('move');
-                moveCount++;
-                moveCountEl.innerText=moveCount;
-
-                if(moveCount % HOLE_STEP === 0){
-                    addNewHole();
+                // 检查是否改变
+                let changed = false;
+                for (let r = 0; r < SIZE; r++) {
+                    for (let c = 0; c < SIZE; c++) {
+                        if (grid[r][c] !== newGrid[r][c]) { changed = true; break; }
+                    }
+                    if (changed) break;
                 }
 
-                randomNewNum();
-                renderGrid();
-                checkWin();
-                checkGameOver();
-            }
-        }
+                if (!changed) return false;
 
-        function checkWin(){
-            if(isWin) return;
-            for(let i=0;i<SIZE;i++){
-                for(let j=0;j<SIZE;j++){
-                    if(grid[i][j]===2048){
-                        isWin=true;
-                        playSound('boom');
-                        boomEffect();
-                        overText.innerText="恭喜合成 2048！";
-                        gameOverModal.style.display='flex';
-                        return;
+                grid = newGrid;
+                score += mergeScore;
+                updateBest();
+                render();
+
+                // 音效
+                if (mergeScore > 0) playMerge(); else playMove();
+
+                // 检查胜利
+                if (!win) {
+                    for (let r = 0; r < SIZE; r++) {
+                        for (let c = 0; c < SIZE; c++) {
+                            if (grid[r][c] === 2048) {
+                                win = true;
+                                gameOver = true;
+                                playWin();
+                                // 粒子爆炸
+                                const rect = container.getBoundingClientRect();
+                                createParticles(rect.width/2, rect.height/2, 80);
+                                overlayTitle.textContent = '🎉 你赢了！';
+                                overlaySub.textContent = `得分: ${score}`;
+                                overlay.classList.add('show');
+                                return true;
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        function checkGameOver(){
-            for(let i=0;i<SIZE;i++)
-                for(let j=0;j<SIZE;j++)
-                    if(grid[i][j]===0 && !isHole(i,j)) return;
-            for(let i=0;i<SIZE;i++){
-                for(let j=0;j<SIZE;j++){
-                    let v=grid[i][j];
-                    if(v===0) continue;
-                    if(j+1<SIZE && !isHole(i,j+1) && grid[i][j+1]===v) return;
-                    if(i+1<SIZE && !isHole(i+1,j) && grid[i+1][j]===v) return;
+                // 生成新方块
+                if (!addRandomTile()) {
+                    // 无法生成新方块，判断是否真的无法移动
+                    if (isGameOver()) {
+                        gameOver = true;
+                        overlayTitle.textContent = '💫 游戏结束';
+                        overlaySub.textContent = `得分: ${score}`;
+                        overlay.classList.add('show');
+                    }
                 }
+                render();
+                return true;
             }
-            overText.innerText="游戏结束";
-            gameOverModal.style.display='flex';
-        }
 
-        // 游戏说明弹窗
-        helpBtn.addEventListener('click', ()=>{
-            helpMask.style.display = 'flex';
-        });
-        closeHelpBtn.addEventListener('click', ()=>{
-            helpMask.style.display = 'none';
-        });
-        // 返回大厅 直接跳转指定链接
-        homeBtn.addEventListener('click', ()=>{
-            window.location.href = "https://red-lightstar.github.io/index.html";
-        });
-
-        // 修复键盘控制 - 核心问题解决
-        document.addEventListener('keydown',e=>{
-            // 阻止方向键的默认行为（如页面滚动）
-            if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
-                e.preventDefault();
+            function isGameOver() {
+                for (let r = 0; r < SIZE; r++) {
+                    for (let c = 0; c < SIZE; c++) {
+                        if (grid[r][c] === 0) return false;
+                        if (c+1 < SIZE && grid[r][c] === grid[r][c+1]) return false;
+                        if (r+1 < SIZE && grid[r][c] === grid[r+1][c]) return false;
+                    }
+                }
+                return true;
             }
-            
-            switch(e.key){
-                case 'ArrowUp': handleMove('up'); break;
-                case 'ArrowDown': handleMove('down'); break;
-                case 'ArrowLeft': handleMove('left'); break;
-                case 'ArrowRight': handleMove('right'); break;
-            }
-        });
 
-        // 移动端触摸
-        let tx=0,ty=0;
-        gameContainer.addEventListener('touchstart',e=>{
-            tx=e.touches[0].clientX;
-            ty=e.touches[0].clientY;
-        });
-        gameContainer.addEventListener('touchend',e=>{
-            let ex=e.changedTouches[0].clientX;
-            let ey=e.changedTouches[0].clientY;
-            let dx=ex-tx,dy=ey-ty;
-            if(Math.abs(dx)>Math.abs(dy)){
-                if(dx>30) handleMove('right');
-                else if(dx<-30) handleMove('left');
-            }else{
-                if(dy>30) handleMove('down');
-                else if(dy<-30) handleMove('up');
+            // 重置游戏
+            function resetGame() {
+                if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+                particles = [];
+                ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+                gameOver = false;
+                win = false;
+                score = 0;
+                overlay.classList.remove('show');
+                initGrid();
+                render();
+                resizeCanvas();
             }
-        });
 
-        window.addEventListener('resize',initCanvas);
-        initGame();
+            // 事件绑定
+            // 键盘
+            document.addEventListener('keydown', (e) => {
+                const map = {
+                    ArrowUp: 'up',
+                    ArrowDown: 'down',
+                    ArrowLeft: 'left',
+                    ArrowRight: 'right'
+                };
+                const dir = map[e.key];
+                if (dir) {
+                    e.preventDefault();
+                    move(dir);
+                }
+            });
+
+            // 触屏滑动
+            let startX = 0, startY = 0;
+            container.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                startX = t.clientX;
+                startY = t.clientY;
+            });
+            container.addEventListener('touchend', (e) => {
+                if (startX === 0 && startY === 0) return;
+                const end = e.changedTouches[0];
+                const dx = end.clientX - startX;
+                const dy = end.clientY - startY;
+                const absDx = Math.abs(dx), absDy = Math.abs(dy);
+                if (Math.max(absDx, absDy) < 20) return;
+                let dir;
+                if (absDx > absDy) {
+                    dir = dx > 0 ? 'right' : 'left';
+                } else {
+                    dir = dy > 0 ? 'down' : 'up';
+                }
+                move(dir);
+                startX = 0; startY = 0;
+            });
+
+            // 按钮
+            document.getElementById('newGameBtn').addEventListener('click', resetGame);
+            overlayBtn.addEventListener('click', resetGame);
+
+            // 帮助
+            const helpModal = document.getElementById('helpModal');
+            document.getElementById('helpBtn').addEventListener('click', () => {
+                helpModal.style.display = 'flex';
+            });
+            document.getElementById('closeHelp').addEventListener('click', () => {
+                helpModal.style.display = 'none';
+            });
+            helpModal.addEventListener('click', (e) => {
+                if (e.target === helpModal) helpModal.style.display = 'none';
+            });
+
+            // 返回主页（可自定义链接）
+            document.getElementById('homeBtn').addEventListener('click', () => {
+                window.location.href = 'https://red-lightstar.github.io/index.html';
+            });
+
+            // 启动游戏
+            resetGame();
+        })();
     </script>
 </body>
 </html>
