@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>星际 2048 · 动轨连击版</title>
+    <title>星际 2048 · 星标版</title>
     <style>
         * {
             margin: 0;
@@ -33,7 +33,7 @@
         }
         .info {
             display: flex;
-            gap: 20px;
+            gap: 24px;
             font-size: 18px;
             margin-bottom: 12px;
             background: rgba(20, 30, 60, 0.6);
@@ -44,7 +44,7 @@
             justify-content: center;
         }
         .info span { color: #ffd700; font-weight: bold; }
-        .info .combo { color: #ff6b6b; }
+        .info .star-info { color: #f1c40f; }
         .btn-group {
             display: flex;
             gap: 10px;
@@ -95,13 +95,52 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 38px;
+            font-size: 32px;
             font-weight: 800;
             color: #fff;
-            transition: transform 0.1s ease, background 0.2s;
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
             position: relative;
+            transition: transform 0.15s ease, background 0.2s;
         }
+        /* 滑动动画 */
+        .slide-right { animation: slideRight 0.15s ease; }
+        .slide-left  { animation: slideLeft 0.15s ease; }
+        .slide-down  { animation: slideDown 0.15s ease; }
+        .slide-up    { animation: slideUp 0.15s ease; }
+
+        @keyframes slideRight {
+            0% { transform: translateX(-30px); opacity: 0.5; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideLeft {
+            0% { transform: translateX(30px); opacity: 0.5; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideDown {
+            0% { transform: translateY(-30px); opacity: 0.5; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideUp {
+            0% { transform: translateY(30px); opacity: 0.5; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 星标样式 - 左上角小星星 */
+        .star-badge {
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            font-size: 20px;
+            line-height: 1;
+            filter: drop-shadow(0 0 6px #f1c40f);
+            pointer-events: none;
+            animation: starPulse 1s ease-in-out infinite alternate;
+        }
+        @keyframes starPulse {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
         /* 数字颜色 */
         .cell-2 { background: #2a3a5a; color: #b0d0ff; }
         .cell-4 { background: #2a4a7a; color: #8cb8ff; }
@@ -129,16 +168,6 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* 动轨粒子画布 (覆盖) */
-        #trail-canvas {
-            position: absolute;
-            top: 0; left: 0;
-            pointer-events: none;
-            width: 100%; height: 100%;
-            border-radius: 18px;
-            z-index: 5;
-        }
-
         #overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -163,7 +192,8 @@
                 gap: 8px;
                 padding: 10px;
             }
-            .cell { font-size: 28px; }
+            .cell { font-size: 24px; }
+            .star-badge { font-size: 16px; top: -4px; left: -4px; }
             .title { font-size: 30px; }
             .info { font-size: 15px; gap: 12px; }
             .btn { padding: 6px 14px; font-size: 13px; }
@@ -171,12 +201,12 @@
     </style>
 </head>
 <body>
-    <div class="title">✦ 星核 2048 · 动轨 ✦</div>
+    <div class="title">✦ 星核 2048 · 星标 ✦</div>
     <div class="info">
         <span>🏆 得分：<span id="scoreDisplay">0</span></span>
         <span>👑 最高：<span id="bestDisplay">0</span></span>
-        <span class="combo">🔥 连击：<span id="comboDisplay">0</span></span>
         <span>🎯 目标：<span id="targetDisplay">2048</span></span>
+        <span class="star-info">⭐ 星标奖励：+50</span>
     </div>
     <div class="btn-group">
         <button class="btn btn-primary" id="newGameBtn">🔄 新游戏</button>
@@ -186,7 +216,6 @@
     </div>
 
     <div id="game-wrapper">
-        <canvas id="trail-canvas"></canvas>
         <div id="game-container"></div>
         <div id="overlay">
             <h2 id="overlayTitle">🎉 你赢了！</h2>
@@ -198,11 +227,12 @@
     <!-- 帮助弹窗 -->
     <div id="helpModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:100;">
         <div style="background:#101a40; padding:30px; border-radius:20px; max-width:420px; width:90%; color:#eee; line-height:1.8;">
-            <h3 style="color:#73c0ff; text-align:center;">🎮 新玩法说明</h3>
-            <p>• <strong>动轨</strong>：每次滑动，光轨会跟随方块移动轨迹</p>
-            <p>• <strong>连击</strong>：连续合并次数越多，额外加分越高</p>
-            <p>• <strong>目标切换</strong>：可挑战 2048 / 4096 / 8192</p>
-            <p>• 其他：方向键 / 滑动屏幕操作</p>
+            <h3 style="color:#73c0ff; text-align:center;">🎮 星标新玩法</h3>
+            <p>• 基础规则同 2048：方向键/滑动移动，相同数字合并</p>
+            <p>• <strong>⭐ 星标</strong>：每次移动后，空位有几率出现星标（持续3步）</p>
+            <p>• 若在星标位置发生 <strong>合并</strong>，额外获得 <strong>+50 分</strong>，星标消失</p>
+            <p>• 星标会随步数衰减，需规划合并时机</p>
+            <p>• 目标可切换 2048 / 4096 / 8192</p>
             <button id="closeHelp" style="margin-top:20px; width:100%; padding:12px; background:#409eff; border:none; border-radius:30px; color:#fff; font-size:18px; cursor:pointer;">知道了</button>
         </div>
     </div>
@@ -211,46 +241,28 @@
         (function(){
             // ---------- 核心配置 ----------
             const SIZE = 4;
-            let TARGET = 2048;  // 可切换
+            let TARGET = 2048;
             const container = document.getElementById('game-container');
             const scoreSpan = document.getElementById('scoreDisplay');
             const bestSpan = document.getElementById('bestDisplay');
-            const comboSpan = document.getElementById('comboDisplay');
             const targetSpan = document.getElementById('targetDisplay');
             const overlay = document.getElementById('overlay');
             const overlayTitle = document.getElementById('overlayTitle');
             const overlaySub = document.getElementById('overlaySub');
             const overlayBtn = document.getElementById('overlayBtn');
 
-            // 动轨画布
-            const trailCanvas = document.getElementById('trail-canvas');
-            const tCtx = trailCanvas.getContext('2d');
-
             // 游戏状态
             let grid = [];
+            let starGrid = [];      // 存储星标剩余寿命（0=无，>0存在并递减）
             let score = 0;
             let best = parseInt(localStorage.getItem('best2048')) || 0;
             let gameOver = false;
             let win = false;
-            let combo = 0;          // 当前连击数
-            let moveCount = 0;      // 总移动次数（仅用于展示）
-
-            // 动轨粒子
-            let trailParticles = [];
-            let trailAnim = null;
-
-            // 音效上下文
-            let audioCtx = null;
-
-            // ---------- 工具函数 ----------
-            function resizeCanvas() {
-                const rect = container.getBoundingClientRect();
-                trailCanvas.width = rect.width;
-                trailCanvas.height = rect.height;
-            }
-            window.addEventListener('resize', resizeCanvas);
+            let lastDirection = '';
+            let moveCount = 0;      // 用于统计，辅助星标生成
 
             // 音效
+            let audioCtx = null;
             function playTone(freq, duration, type = 'sine') {
                 try {
                     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -268,71 +280,16 @@
             }
             function playMove() { playTone(200, 0.08); }
             function playMerge() { playTone(400, 0.12); }
+            function playStar() { playTone(800, 0.15, 'square'); }
             function playWin() { playTone(600, 0.2, 'square'); }
 
-            // ---------- 动轨系统 ----------
-            // 在两点之间生成光轨粒子
-            function addTrail(x1, y1, x2, y2, count = 25) {
-                const rect = container.getBoundingClientRect();
-                // 坐标转换：相对于容器
-                const scaleX = trailCanvas.width / rect.width;
-                const scaleY = trailCanvas.height / rect.height;
-                const sx1 = x1 * scaleX, sy1 = y1 * scaleY;
-                const sx2 = x2 * scaleX, sy2 = y2 * scaleY;
-
-                for (let i = 0; i < count; i++) {
-                    const t = i / count;
-                    const x = sx1 + (sx2 - sx1) * t + (Math.random() - 0.5) * 6;
-                    const y = sy1 + (sy2 - sy1) * t + (Math.random() - 0.5) * 6;
-                    const life = 0.6 + Math.random() * 0.4;
-                    trailParticles.push({
-                        x, y,
-                        vx: (Math.random() - 0.5) * 0.8,
-                        vy: (Math.random() - 0.5) * 0.8 - 0.3,
-                        life: life,
-                        maxLife: life,
-                        size: 2 + Math.random() * 4,
-                        color: `hsl(${190 + Math.random() * 30}, 100%, ${60 + Math.random() * 30}%)`
-                    });
-                }
-                if (!trailAnim) animateTrail();
-            }
-
-            function animateTrail() {
-                tCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
-                let alive = false;
-                for (let i = trailParticles.length - 1; i >= 0; i--) {
-                    const p = trailParticles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.02;
-                    p.life -= 0.012;
-                    if (p.life <= 0) { trailParticles.splice(i, 1); continue; }
-                    alive = true;
-                    const alpha = p.life / p.maxLife;
-                    tCtx.globalAlpha = alpha * 0.7;
-                    tCtx.fillStyle = p.color;
-                    tCtx.beginPath();
-                    tCtx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
-                    tCtx.fill();
-                }
-                tCtx.globalAlpha = 1;
-                if (alive) {
-                    trailAnim = requestAnimationFrame(animateTrail);
-                } else {
-                    trailAnim = null;
-                    tCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
-                }
-            }
-
-            // ---------- 核心游戏逻辑 ----------
+            // ---------- 核心逻辑 ----------
             function initGrid() {
                 grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+                starGrid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
                 addRandomTile();
                 addRandomTile();
                 updateBest();
-                combo = 0;
-                updateCombo();
             }
 
             function addRandomTile() {
@@ -346,6 +303,29 @@
                 return true;
             }
 
+            // 生成星标（概率20%，寿命3）
+            function trySpawnStar() {
+                let empties = [];
+                for (let r = 0; r < SIZE; r++)
+                    for (let c = 0; c < SIZE; c++)
+                        if (grid[r][c] === 0 && starGrid[r][c] === 0) empties.push({r, c});
+                if (empties.length === 0) return false;
+                if (Math.random() > 0.25) return false; // 25%概率生成，提高出现率
+                const pos = empties[Math.floor(Math.random() * empties.length)];
+                starGrid[pos.r][pos.c] = 3; // 寿命3步
+                return true;
+            }
+
+            // 衰减所有星标
+            function decayStars() {
+                for (let r = 0; r < SIZE; r++)
+                    for (let c = 0; c < SIZE; c++) {
+                        if (starGrid[r][c] > 0) {
+                            starGrid[r][c]--;
+                        }
+                    }
+            }
+
             function updateBest() {
                 if (score > best) {
                     best = score;
@@ -354,28 +334,12 @@
                 bestSpan.textContent = best;
             }
 
-            function updateCombo() {
-                comboSpan.textContent = combo;
-            }
-
-            // 获取格子中心坐标（相对于容器）
-            function getCellCenter(row, col) {
-                const rect = container.getBoundingClientRect();
-                const cellW = rect.width / SIZE;
-                const cellH = rect.height / SIZE;
-                // 加上padding偏移
-                const pad = 14; // 与css padding一致
-                const gap = 12;
-                const x = pad + col * (cellW + gap) + cellW / 2;
-                const y = pad + row * (cellH + gap) + cellH / 2;
-                return { x, y };
-            }
-
-            // 移动核心 (返回是否移动以及合并格子坐标)
+            // 移动核心（返回是否发生移动）
             function move(direction) {
                 if (gameOver) return false;
                 const oldGrid = grid.map(row => [...row]);
-                let mergedPositions = []; // 记录合并位置用于特效
+                let merged = false;
+                let mergePositions = []; // 存储合并的位置 {r, c}
 
                 const dirMap = {
                     left: { dr: 0, dc: -1, start: 0, end: SIZE, step: 1 },
@@ -388,11 +352,9 @@
 
                 const newGrid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
                 let mergeScore = 0;
-                let merged = false;
 
-                // 遍历方向
+                // 记录合并发生的位置（用于星标判定）
                 if (d.dr !== 0) {
-                    // 垂直
                     for (let c = 0; c < SIZE; c++) {
                         let list = [];
                         for (let r = 0; r < SIZE; r++) {
@@ -405,7 +367,7 @@
                                 const newVal = list[k].val * 2;
                                 mergedList.push({r: list[k].r, c, val: newVal, merged: true});
                                 mergeScore += newVal;
-                                mergedPositions.push({r: list[k].r, c}); // 记录原位置（用于特效）
+                                mergePositions.push({r: list[k].r, c});
                                 k++;
                             } else {
                                 mergedList.push({r: list[k].r, c, val: list[k].val, merged: false});
@@ -424,7 +386,6 @@
                         }
                     }
                 } else {
-                    // 水平
                     for (let r = 0; r < SIZE; r++) {
                         let list = [];
                         for (let c = 0; c < SIZE; c++) {
@@ -437,7 +398,7 @@
                                 const newVal = list[k].val * 2;
                                 mergedList.push({r, c: list[k].c, val: newVal, merged: true});
                                 mergeScore += newVal;
-                                mergedPositions.push({r, c: list[k].c});
+                                mergePositions.push({r, c: list[k].c});
                                 k++;
                             } else {
                                 mergedList.push({r, c: list[k].c, val: list[k].val, merged: false});
@@ -457,7 +418,7 @@
                     }
                 }
 
-                // 检查是否改变
+                // 检查是否变化
                 let changed = false;
                 for (let r = 0; r < SIZE; r++) {
                     for (let c = 0; c < SIZE; c++) {
@@ -467,37 +428,36 @@
                 }
                 if (!changed) return false;
 
-                // 更新网格和分数
+                // 更新grid
                 grid = newGrid;
-                if (mergeScore > 0) {
-                    // 连击
-                    combo++;
-                    updateCombo();
-                    const bonus = combo * 10;
-                    const totalAdd = mergeScore + bonus;
-                    score += totalAdd;
-                    playMerge();
-                    // 在合并位置触发特效（动轨+粒子）
-                    for (let pos of mergedPositions) {
-                        const center = getCellCenter(pos.r, pos.c);
-                        // 动轨 – 在合并位置爆发光晕
-                        for (let i = 0; i < 10; i++) {
-                            const angle = Math.random() * Math.PI * 2;
-                            const dist = 20 + Math.random() * 30;
-                            const x1 = center.x, y1 = center.y;
-                            const x2 = center.x + Math.cos(angle) * dist;
-                            const y2 = center.y + Math.sin(angle) * dist;
-                            addTrail(x1, y1, x2, y2, 8);
-                        }
+
+                // **星标处理**
+                // 先衰减所有星标（每走一步寿命减1）
+                decayStars();
+
+                // 然后检查合并位置是否有星标，有则触发奖励
+                let starBonus = 0;
+                for (let pos of mergePositions) {
+                    const r = pos.r, c = pos.c;
+                    if (starGrid[r][c] > 0) {
+                        starBonus += 50;
+                        starGrid[r][c] = 0; // 星标消失
+                        playStar();
                     }
+                }
+
+                // 增加得分：合并得分 + 星标奖励
+                if (mergeScore > 0 || starBonus > 0) {
+                    score += mergeScore + starBonus;
+                    playMerge();
                 } else {
-                    // 无合并，重置连击
-                    combo = 0;
-                    updateCombo();
                     playMove();
                 }
 
-                // 生成新方块
+                // 记录方向用于动画
+                lastDirection = direction;
+
+                // 生成新方块（在空白位置）
                 if (!addRandomTile()) {
                     if (isGameOver()) {
                         gameOver = true;
@@ -507,7 +467,10 @@
                     }
                 }
 
-                // 检查胜利条件
+                // 尝试生成星标（在空位）
+                trySpawnStar();
+
+                // 检查胜利
                 if (!win) {
                     for (let r = 0; r < SIZE; r++) {
                         for (let c = 0; c < SIZE; c++) {
@@ -518,16 +481,6 @@
                                 overlayTitle.textContent = `🎉 达成 ${TARGET}！`;
                                 overlaySub.textContent = `得分: ${score}`;
                                 overlay.classList.add('show');
-                                // 胜利粒子
-                                const rect = container.getBoundingClientRect();
-                                for (let i = 0; i < 50; i++) {
-                                    const angle = Math.random() * Math.PI * 2;
-                                    const dist = 100 + Math.random() * 150;
-                                    const x1 = rect.width/2, y1 = rect.height/2;
-                                    const x2 = rect.width/2 + Math.cos(angle) * dist;
-                                    const y2 = rect.height/2 + Math.sin(angle) * dist;
-                                    addTrail(x1, y1, x2, y2, 12);
-                                }
                                 break;
                             }
                         }
@@ -537,11 +490,6 @@
 
                 updateBest();
                 render();
-                // 如果移动时没有合并，但发生移动（有方块滑动），也添加动轨（沿着移动方向）
-                if (!merged) {
-                    // 简单动轨：从旧位置到新位置（但这里没有记录位置变化，用随机方向）
-                    // 可以省略，或者随机加一些粒子
-                }
                 return true;
             }
 
@@ -556,38 +504,52 @@
                 return true;
             }
 
-            // ---------- 渲染 ----------
+            // ---------- 渲染（带滑动动画和星标） ----------
             function render() {
                 container.innerHTML = '';
+                let slideClass = '';
+                if (lastDirection === 'left') slideClass = 'slide-left';
+                else if (lastDirection === 'right') slideClass = 'slide-right';
+                else if (lastDirection === 'up') slideClass = 'slide-up';
+                else if (lastDirection === 'down') slideClass = 'slide-down';
+
                 for (let r = 0; r < SIZE; r++) {
                     for (let c = 0; c < SIZE; c++) {
                         const val = grid[r][c];
                         const div = document.createElement('div');
                         div.className = 'cell' + (val ? ' cell-' + val : '');
+                        if (val && slideClass) {
+                            div.classList.add(slideClass);
+                        }
+                        // 显示数字
                         div.textContent = val || '';
+
+                        // 如果有星标
+                        if (starGrid[r][c] > 0) {
+                            const starSpan = document.createElement('span');
+                            starSpan.className = 'star-badge';
+                            starSpan.textContent = '⭐';
+                            div.appendChild(starSpan);
+                        }
+
                         container.appendChild(div);
                     }
                 }
                 scoreSpan.textContent = score;
                 bestSpan.textContent = best;
                 targetSpan.textContent = TARGET;
-                resizeCanvas();
             }
 
-            // ---------- 重置游戏 ----------
+            // ---------- 重置 ----------
             function resetGame() {
-                if (trailAnim) { cancelAnimationFrame(trailAnim); trailAnim = null; }
-                trailParticles = [];
-                tCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
                 gameOver = false;
                 win = false;
                 score = 0;
-                combo = 0;
-                updateCombo();
                 overlay.classList.remove('show');
+                lastDirection = '';
+                starGrid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
                 initGrid();
                 render();
-                resizeCanvas();
             }
 
             // ---------- 切换目标 ----------
@@ -597,12 +559,10 @@
                 idx = (idx + 1) % targets.length;
                 TARGET = targets[idx];
                 targetSpan.textContent = TARGET;
-                // 重置游戏，以新目标开始
                 resetGame();
             }
 
             // ---------- 事件绑定 ----------
-            // 键盘
             document.addEventListener('keydown', (e) => {
                 const map = {
                     ArrowUp: 'up',
@@ -617,7 +577,6 @@
                 }
             });
 
-            // 触屏
             let startX = 0, startY = 0;
             container.addEventListener('touchstart', (e) => {
                 const t = e.touches[0];
@@ -641,7 +600,6 @@
                 startX = 0; startY = 0;
             });
 
-            // 按钮
             document.getElementById('newGameBtn').addEventListener('click', resetGame);
             overlayBtn.addEventListener('click', resetGame);
             document.getElementById('targetBtn').addEventListener('click', toggleTarget);
@@ -658,7 +616,6 @@
                 if (e.target === helpModal) helpModal.style.display = 'none';
             });
 
-            // 返回主页
             document.getElementById('homeBtn').addEventListener('click', () => {
                 window.location.href = 'https://red-lightstar.github.io/index.html';
             });
