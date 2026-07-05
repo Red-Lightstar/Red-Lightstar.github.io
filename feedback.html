@@ -1,16 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>意见反馈</title>
     <style>
-        /* ===== 全局重置 ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #1a1a2e;
             font-family: 'Microsoft YaHei', Arial, sans-serif;
@@ -20,7 +15,7 @@
             align-items: center;
         }
 
-        /* ===== 顶部 ===== */
+        /* 顶部 */
         #header {
             width: 100%;
             max-width: 560px;
@@ -44,11 +39,9 @@
             font-size: 13px;
             text-decoration: none;
         }
-        #backBtn:hover {
-            background: #6b6b8a;
-        }
+        #backBtn:hover { background: #6b6b8a; }
 
-        /* ===== 主面板 ===== */
+
         #panel {
             background: #1e1e38;
             border: 1px solid #3a3a5a;
@@ -63,18 +56,9 @@
             font-size: 18px;
             margin-bottom: 14px;
             cursor: default;
-            user-select: none;
-        }
-        #panel h2.locked::after {
-            content: ' 🔒';
-            font-size: 14px;
-        }
-        #panel h2.unlocked::after {
-            content: ' 🔓';
-            font-size: 14px;
         }
 
-        /* ===== 服务器状态 ===== */
+        /* 服务器状态 */
         #serverStatus {
             font-size: 12px;
             padding: 8px 12px;
@@ -91,13 +75,8 @@
             color: #ff6464;
             border: 1px solid rgba(255, 100, 100, 0.3);
         }
-        #serverStatus.local {
-            background: rgba(255, 200, 50, 0.1);
-            color: #ffcc44;
-            border: 1px solid rgba(255, 200, 50, 0.3);
-        }
 
-        /* ===== 输入框 ===== */
+        /* 输入框 */
         #msgInput {
             width: 100%;
             height: 100px;
@@ -111,14 +90,10 @@
             outline: none;
             font-family: inherit;
         }
-        #msgInput:focus {
-            border-color: #4ade80;
-        }
-        #msgInput::placeholder {
-            color: #555;
-        }
+        #msgInput:focus { border-color: #4ade80; }
+        #msgInput::placeholder { color: #555; }
 
-        /* ===== 提交按钮 ===== */
+        /* 提交按钮 */
         #submitBtn {
             margin-top: 12px;
             background: #4ade80;
@@ -130,15 +105,10 @@
             cursor: pointer;
             font-weight: bold;
         }
-        #submitBtn:hover {
-            background: #22c55e;
-        }
-        #submitBtn:disabled {
-            background: #555;
-            cursor: not-allowed;
-        }
+        #submitBtn:hover { background: #22c55e; }
+        #submitBtn:disabled { background: #555; cursor: not-allowed; }
 
-        /* ===== 成功提示 ===== */
+        /* 成功提示 */
         #successHint {
             display: none;
             color: #4ade80;
@@ -146,22 +116,14 @@
             margin-top: 10px;
         }
 
-        /* ===== 历史留言区 ===== */
+        /* 历史留言 */
         #historyTitle {
             color: #666;
             font-size: 13px;
             margin-bottom: 12px;
             width: 100%;
             max-width: 560px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
         }
-        #historyTitle span {
-            margin-right: auto;
-        }
-
         #list {
             width: 100%;
             max-width: 560px;
@@ -178,29 +140,13 @@
             align-items: flex-start;
             gap: 12px;
         }
-        .msg-content {
-            flex: 1;
-        }
-        .msg-meta {
-            color: #555;
-            font-size: 11px;
-            margin-bottom: 6px;
-        }
-        .msg-text {
-            color: #ccc;
-            font-size: 14px;
-            line-height: 1.6;
-            word-break: break-all;
-        }
-        #noMsg {
-            color: #444;
-            font-size: 13px;
-            text-align: center;
-            padding: 20px 0;
-        }
+        .msg-content { flex: 1; }
+        .msg-meta { color: #555; font-size: 11px; margin-bottom: 6px; }
+        .msg-text { color: #ccc; font-size: 14px; line-height: 1.6; word-break: break-all; }
+        #noMsg { color: #444; font-size: 13px; text-align: center; padding: 20px 0; }
 
-        /* ===== 操作按钮 ===== */
-        .action-btn {
+        /* 刷新按钮 */
+        #refreshBtn {
             background: #2e2e4a;
             color: #888;
             border: 1px solid #3a3a5a;
@@ -208,25 +154,26 @@
             font-size: 12px;
             border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s;
+            margin-left: 8px;
         }
-        .action-btn:hover {
-            background: #3a3a5a;
-        }
-        .action-btn.danger {
+        #refreshBtn:hover { background: #3a3a5a; }
+
+        /* 清空按钮 */
+        #clearBtn {
             background: #4a2e2e;
             color: #ff6464;
-            border-color: #5a3a3a;
+            border: 1px solid #5a3a3a;
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 8px;
             display: none;
         }
-        .action-btn.danger.show {
-            display: inline-block;
-        }
-        .action-btn.danger:hover {
-            background: #5a3a3a;
-        }
+        #clearBtn.show { display: inline-block; }
+        #clearBtn:hover { background: #5a3a3a; }
 
-        /* ===== 删除按钮（每条留言上的） ===== */
+        /* 删除按钮 */
         .deleteBtn {
             background: transparent;
             color: #555;
@@ -237,242 +184,40 @@
             cursor: pointer;
             flex-shrink: 0;
             display: none;
-            transition: all 0.2s;
         }
-        .deleteBtn.show {
-            display: inline-block;
-        }
+        .deleteBtn.show { display: inline-block; }
         .deleteBtn:hover {
             background: #ff6464;
             color: #fff;
             border-color: #ff6464;
         }
-
-        /* ===== 修改密码弹窗 ===== */
-        #pwdModal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 999;
-        }
-        #pwdModal.active {
-            display: flex;
-        }
-        #pwdModal .modal-box {
-            background: #1e1e38;
-            border: 1px solid #3a3a5a;
-            border-radius: 14px;
-            padding: 30px 36px;
-            max-width: 420px;
-            width: 90%;
-        }
-        #pwdModal .modal-box h3 {
-            color: #4ade80;
-            font-size: 17px;
-            margin-bottom: 16px;
-        }
-        #pwdModal .modal-box label {
-            color: #aaa;
-            font-size: 13px;
-            display: block;
-            margin-top: 12px;
-            margin-bottom: 4px;
-        }
-        #pwdModal .modal-box input {
-            width: 100%;
-            background: #13132a;
-            border: 1px solid #3a3a5a;
-            border-radius: 6px;
-            padding: 10px 12px;
-            color: #ddd;
-            font-size: 14px;
-            outline: none;
-        }
-        #pwdModal .modal-box input:focus {
-            border-color: #4ade80;
-        }
-        #pwdModal .modal-box .btn-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-            justify-content: flex-end;
-        }
-        #pwdModal .modal-box .btn-row button {
-            padding: 8px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-        }
-        #pwdModal .modal-box .btn-row .btn-confirm {
-            background: #4ade80;
-            color: #1a1a2e;
-            font-weight: bold;
-        }
-        #pwdModal .modal-box .btn-row .btn-confirm:hover {
-            background: #22c55e;
-        }
-        #pwdModal .modal-box .btn-row .btn-cancel {
-            background: #3a3a5a;
-            color: #aaa;
-        }
-        #pwdModal .modal-box .btn-row .btn-cancel:hover {
-            background: #4a4a6a;
-        }
-        #pwdModal .modal-box .hint {
-            color: #888;
-            font-size: 12px;
-            margin-top: 12px;
-            border-top: 1px solid #2e2e4a;
-            padding-top: 12px;
-        }
-        #pwdModal .modal-box .hint code {
-            color: #4ade80;
-            background: #13132a;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        /* ===== 响应式 ===== */
-        @media (max-width: 480px) {
-            #panel {
-                padding: 18px 16px;
-            }
-            #pwdModal .modal-box {
-                padding: 20px 18px;
-            }
-        }
     </style>
 </head>
 <body>
 
-    <!-- ========== 顶部 ========== -->
     <div id="header">
         <a href="index.html" id="title">← 游戏中心</a>
         <a href="index.html" id="backBtn">返回主页</a>
     </div>
 
-    <!-- ========== 主面板 ========== -->
     <div id="panel">
-        <h2 id="panelTitle" class="locked">💬 留言反馈</h2>
-        <div id="serverStatus" class="offline">🔄 正在连接服务器…</div>
+        <h2 id="panelTitle">💬 留言反馈</h2>
+        <div id="serverStatus" class="offline">🔄 正在连接服务器...</div>
         <textarea id="msgInput" placeholder="想说点什么？留下你的建议吧…"></textarea>
         <button id="submitBtn">提交留言</button>
         <div id="successHint">✅ 感谢留言，已收到！</div>
     </div>
 
-    <!-- ========== 历史留言 ========== -->
     <div id="historyTitle">
-        <span>📋 全部留言</span>
-        <button class="action-btn" id="refreshBtn">🔄 刷新</button>
-        <button class="action-btn danger" id="clearBtn">🗑️ 清空</button>
-        <button class="action-btn" id="changePwdBtn" style="background:#2e3a4a;color:#6a9aba;border-color:#3a4a5a;">🔑 修改密码</button>
+        📋 全部留言
+        <button id="refreshBtn">🔄 刷新</button>
+        <button id="clearBtn">🗑️ 清空</button>
     </div>
 
     <div id="list"></div>
 
-    <!-- ========== 修改密码弹窗 ========== -->
-    <div id="pwdModal">
-        <div class="modal-box">
-            <h3>🔐 修改管理密码</h3>
-            <label>当前密码</label>
-            <input type="password" id="oldPwdInput" placeholder="请输入当前密码" />
-            <label>新密码</label>
-            <input type="password" id="newPwdInput" placeholder="请输入新密码（至少4位）" />
-            <label>确认新密码</label>
-            <input type="password" id="confirmPwdInput" placeholder="请再次输入新密码" />
-            <div class="btn-row">
-                <button class="btn-cancel" id="pwdCancelBtn">取消</button>
-                <button class="btn-confirm" id="pwdConfirmBtn">确认修改</button>
-            </div>
-            <div class="hint">
-                💡 密码将使用 SHA-256 哈希后存储于本地浏览器，<br />
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- ======================== JavaScript ========================== -->
-    <!-- ============================================================ -->
     <script>
-        // =================================================================
-        //  🔐  密码管理（SHA-256 哈希）
-        // =================================================================
-
-        // ---------- SHA-256 工具 ----------
-        async function sha256(message) {
-            const enc = new TextEncoder();
-            const data = enc.encode(message);
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            const arr = Array.from(new Uint8Array(hash));
-            return arr.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        // ---------- 默认密码的哈希值 ----------
-        const DEFAULT_PWD_HASH = '8d5e3f8c9b7a2d4e6f8a1b3c5d7e9f0a2b4c6d8e0f1a2b3c4d5e6f7a8b9c0d1e2f';
-
-        const STORAGE_KEY = 'admin_pwd_hash';
-
-        function getStoredHash() {
-            return localStorage.getItem(STORAGE_KEY) || DEFAULT_PWD_HASH;
-        }
-
-        async function verifyPassword(input) {
-            const hash = await sha256(input);
-            return hash === getStoredHash();
-        }
-
-        async function changePassword(oldPwd, newPwd) {
-            if (!(await verifyPassword(oldPwd))) {
-                return { success: false, msg: '❌ 当前密码错误' };
-            }
-            if (newPwd.length < 4) {
-                return { success: false, msg: '❌ 新密码至少4位' };
-            }
-            const newHash = await sha256(newPwd);
-            localStorage.setItem(STORAGE_KEY, newHash);
-            return { success: true, msg: '✅ 密码修改成功！' };
-        }
-
-        // =================================================================
-        //  🚀 主应用逻辑（Supabase + 本地降级）
-        // =================================================================
-
-        // ---------- Supabase 配置 ----------
-        const SUPABASE_URL = 'https://ujpvdztgntjkhqaecpjt.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_ZGBIkuOZeeGKW3sJzxCAAw__jjtiueV';
-
-        // ---------- DOM 元素 ----------
-        const panelTitle = document.getElementById('panelTitle');
-        const serverStatus = document.getElementById('serverStatus');
-        const msgInput = document.getElementById('msgInput');
-        const submitBtn = document.getElementById('submitBtn');
-        const successHint = document.getElementById('successHint');
-        const list = document.getElementById('list');
-        const refreshBtn = document.getElementById('refreshBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const changePwdBtn = document.getElementById('changePwdBtn');
-
-        const pwdModal = document.getElementById('pwdModal');
-        const oldPwdInput = document.getElementById('oldPwdInput');
-        const newPwdInput = document.getElementById('newPwdInput');
-        const confirmPwdInput = document.getElementById('confirmPwdInput');
-        const pwdConfirmBtn = document.getElementById('pwdConfirmBtn');
-        const pwdCancelBtn = document.getElementById('pwdCancelBtn');
-
-        // ---------- 全局状态 ----------
-        let isAdmin = false; // 是否已解锁管理权限
-        let supabase = null; // Supabase 客户端实例
-        let useLocalMode = false; // 是否降级到纯本地存储
-
-        // ---------- 加载 Supabase SDK ----------
+        // 加载 Supabase SDK（主源 + 国内备用源）
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
@@ -483,362 +228,230 @@
             });
         }
 
-        // ---------- 初始化 Supabase（带自动降级） ----------
-        async function initSupabase() {
-            // 尝试多个 CDN 源
-            const cdnList = [
-                'https://cdn.bootcdn.net/ajax/libs/supabase-js/2.39.7/umd/supabase.min.js',
-                'https://fastly.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
-                'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js'
-            ];
+        async function initApp() {
+            // ==========================================
+            // ⚙️ Supabase 配置（永久地址，不用再改）
+            // ==========================================
+            const SUPABASE_URL = 'https://ujpvdztgntjkhqaecpjt.supabase.co';
+            const SUPABASE_KEY = 'sb_publishable_ZGBIkuOZeeGKW3sJzxCAAw__jjtiueV';
 
-            let loaded = false;
-            for (const url of cdnList) {
-                try {
-                    await loadScript(url);
-                    if (window.supabase) {
-                        loaded = true;
-                        break;
-                    }
-                } catch (_) {
-                    // 继续尝试下一个
-                }
-            }
+            // 管理员密码（改成一个你自己记得的密码）
+            const ADMIN_PASSWORD = 'dj123321'; 
+            // ==========================================
 
-            if (!loaded) {
-                console.warn('⚠️ 所有 Supabase CDN 加载失败，启用本地存储模式');
-                useLocalMode = true;
-                serverStatus.className = 'local';
-                serverStatus.textContent = '📴 离线模式（数据保存在本地浏览器）';
-                return true; // 不创建 supabase 客户端
-            }
-
-            // 创建客户端
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-            // 测试连接
+            // 尝试加载 Supabase SDK
             try {
-                const { error } = await supabase.from('messages').select('id', { count: 'exact', head: true });
-                if (!error) {
-                    serverStatus.className = 'online';
-                    serverStatus.textContent = '✅ 服务器已连接';
-                    useLocalMode = false;
-                    return true;
-                } else {
-                    throw new Error(error.message);
+                await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+            } catch (e) {
+                try {
+                    await loadScript('https://unpkg.com/@supabase/supabase-js@2');
+                } catch (e2) {
+                    alert('⚠️ 无法加载核心组件，请检查网络后刷新页面');
+                    return;
                 }
-            } catch (_) {
-                console.warn('⚠️ Supabase 连接失败，切换到本地存储模式');
-                useLocalMode = true;
-                serverStatus.className = 'local';
-                serverStatus.textContent = '📴 离线模式（数据保存在本地浏览器）';
-                // 关闭 supabase 客户端引用，后续使用本地存储
-                supabase = null;
-                return true;
             }
-        }
 
-        // =================================================================
-        //  数据操作（统一接口，自动选择 Supabase 或本地存储）
-        // =================================================================
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ---------- 获取所有留言 ----------
-        async function fetchMessages() {
-            if (!useLocalMode && supabase) {
+            // ===== 隐藏管理入口：点击"留言反馈"标题6次触发 =====
+            let secretClicks = 0;
+            const panelTitle = document.getElementById('panelTitle');
+            panelTitle.addEventListener('click', () => {
+                secretClicks++;
+                if (secretClicks >= 6) {
+                    secretClicks = 0;
+                    const pwd = prompt('请输入管理密码：');
+                    if (pwd) checkAdmin(pwd);
+                }
+            });
+
+            const msgInput      = document.getElementById('msgInput');
+            const submitBtn     = document.getElementById('submitBtn');
+            const successHint   = document.getElementById('successHint');
+            const list          = document.getElementById('list');
+            const serverStatus  = document.getElementById('serverStatus');
+            const refreshBtn    = document.getElementById('refreshBtn');
+            const clearBtn      = document.getElementById('clearBtn');
+
+            let isAdmin = false;
+            let serverOnline = false;
+
+            // 页面加载时：若已有保存的密码，自动验证
+            const savedPwd = localStorage.getItem('adminPwd');
+            if (savedPwd) {
+                checkAdmin(savedPwd);
+            }
+
+            // 检查服务器状态
+            async function checkServer() {
+                try {
+                    const { data, error } = await supabase
+                        .from('messages')
+                        .select('id', { count: 'exact', head: true });
+                    if (!error) {
+                        serverOnline = true;
+                        serverStatus.className = 'online';
+                        serverStatus.textContent = '✅ 服务器已连接';
+                        return true;
+                    }
+                } catch (e) { /* ignore */ }
+                serverOnline = false;
+                serverStatus.className = 'offline';
+                serverStatus.textContent = '❌ 服务器未连接';
+                return false;
+            }
+
+            // 提交留言
+            async function submitMessage() {
+                const text = msgInput.value.trim();
+                if (!text) return;
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = '提交中...';
+
+                try {
+                    const { data, error } = await supabase
+                        .from('messages')
+                        .insert({ text: text, offline: false })
+                        .select();
+
+                    if (!error) {
+                        msgInput.value = '';
+                        successHint.style.display = 'block';
+                        await loadMessages();
+                        setTimeout(() => { successHint.style.display = 'none'; }, 3000);
+                    } else {
+                        alert('提交失败：' + error.message);
+                    }
+                } catch (e) {
+                    alert('网络错误，请检查网络连接');
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交留言';
+            }
+
+            submitBtn.addEventListener('click', submitMessage);
+            msgInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitMessage();
+                }
+            });
+
+            // 加载留言
+            async function loadMessages() {
                 try {
                     const { data, error } = await supabase
                         .from('messages')
                         .select('*')
                         .order('created_at', { ascending: false });
-                    if (!error) return data || [];
-                } catch (_) { /* 失败则降级到本地 */ }
+
+                    if (!error) {
+                        renderMessages(data || []);
+                        return;
+                    }
+                } catch (e) { /* ignore */ }
+
+                // 失败时显示本地缓存
+                renderLocal();
             }
 
-            // 本地模式
-            try {
-                return JSON.parse(localStorage.getItem('msgs') || '[]');
-            } catch (_) {
-                return [];
-            }
-        }
-
-        // ---------- 添加留言 ----------
-        async function addMessage(text) {
-            if (!useLocalMode && supabase) {
-                try {
-                    const { error } = await supabase.from('messages').insert({ text, offline: false });
-                    if (!error) return true;
-                } catch (_) { /* 失败降级 */ }
+            function renderLocal() {
+                const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
+                renderMessages(msgs);
             }
 
-            // 本地模式
-            const msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
-            const newMsg = {
-                id: Date.now().toString(),
-                text: text,
-                created_at: new Date().toISOString(),
-                offline: true
-            };
-            msgs.unshift(newMsg);
-            localStorage.setItem('msgs', JSON.stringify(msgs));
-            return true;
-        }
-
-        // ---------- 删除留言 ----------
-        async function deleteMessageById(id) {
-            if (!useLocalMode && supabase) {
-                try {
-                    const { error } = await supabase.from('messages').delete().eq('id', id);
-                    if (!error) return true;
-                } catch (_) { /* 降级 */ }
-            }
-
-            // 本地模式
-            let msgs = JSON.parse(localStorage.getItem('msgs') || '[]');
-            msgs = msgs.filter(m => m.id !== id);
-            localStorage.setItem('msgs', JSON.stringify(msgs));
-            return true;
-        }
-
-        // ---------- 清空所有留言 ----------
-        async function clearAllMessages() {
-            if (!useLocalMode && supabase) {
-                try {
-                    const { error } = await supabase.from('messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-                    if (!error) return true;
-                } catch (_) { /* 降级 */ }
-            }
-
-            // 本地模式
-            localStorage.setItem('msgs', '[]');
-            return true;
-        }
-
-        // =================================================================
-        //  UI 渲染
-        // =================================================================
-
-        function renderMessages(msgs) {
-            if (!msgs || msgs.length === 0) {
-                list.innerHTML = '<div id="noMsg">暂无留言，快来抢沙发吧 ✨</div>';
-                return;
-            }
-            list.innerHTML = msgs.map(m => {
-                const timeStr = m.created_at ?
-                    new Date(m.created_at).toLocaleString('zh-CN') :
-                    (m.time || '');
-                const isOffline = m.offline || false;
-                const text = (m.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                const id = m.id || '';
-                return `
+            function renderMessages(msgs) {
+                if (msgs.length === 0) {
+                    list.innerHTML = '<div id="noMsg">暂无留言，快来抢沙发吧 ✨</div>';
+                    return;
+                }
+                list.innerHTML = msgs.map(m => {
+                    const timeStr = m.created_at
+                        ? new Date(m.created_at).toLocaleString('zh-CN')
+                        : (m.time || '');
+                    const isOffline = m.offline;
+                    return `
                     <div class="msg-card">
                         <div class="msg-content">
                             <div class="msg-meta">${timeStr}${isOffline ? ' 📴(离线)' : ''}</div>
-                            <div class="msg-text">${text}</div>
+                            <div class="msg-text">${(m.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
                         </div>
-                        ${id ? `<button class="deleteBtn${isAdmin ? ' show' : ''}" data-id="${id}">删除</button>` : ''}
+                        ${m.id ? `<button class="deleteBtn${isAdmin ? ' show' : ''}" onclick="deleteMessage('${m.id}')">删除</button>` : ''}
                     </div>
-                `;
-            }).join('');
-
-            // 绑定删除事件
-            document.querySelectorAll('.deleteBtn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const id = this.dataset.id;
-                    if (id) {
-                        if (!isAdmin) { alert('请先验证管理密码'); return; }
-                        if (!confirm('确定删除这条留言？')) return;
-                        await deleteMessageById(id);
-                        await loadMessages();
-                    }
-                });
-            });
-        }
-
-        // ---------- 加载并显示留言 ----------
-        async function loadMessages() {
-            const msgs = await fetchMessages();
-            renderMessages(msgs);
-        }
-
-        // ---------- 提交留言（UI 处理） ----------
-        async function handleSubmit() {
-            const text = msgInput.value.trim();
-            if (!text) return;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '提交中…';
-            try {
-                await addMessage(text);
-                msgInput.value = '';
-                successHint.style.display = 'block';
-                await loadMessages();
-                setTimeout(() => { successHint.style.display = 'none'; }, 3000);
-            } catch (e) {
-                alert('提交失败，请重试');
+                    `;
+                }).join('');
             }
-            submitBtn.disabled = false;
-            submitBtn.textContent = '提交留言';
-        }
 
-        // =================================================================
-        //  管理员解锁（点击标题 6 次）
-        // =================================================================
-
-        let secretClicks = 0;
-
-        panelTitle.addEventListener('click', async () => {
-            secretClicks++;
-            if (secretClicks >= 6) {
-                secretClicks = 0;
-                if (isAdmin) {
-                    alert('🔓 您已是管理员');
-                    return;
-                }
-                const pwd = prompt('请输入管理密码：');
-                if (pwd === null) return;
-                if (await verifyPassword(pwd)) {
+            // 验证管理员密码
+            function checkAdmin(pwd) {
+                if (pwd === ADMIN_PASSWORD) {
                     isAdmin = true;
-                    sessionStorage.setItem('admin_session', 'true');
-                    panelTitle.className = 'unlocked';
-                    panelTitle.textContent = '💬 留言反馈';
+                    localStorage.setItem('adminPwd', pwd);
+                    panelTitle.textContent = '🔓 留言反馈（已解锁）';
                     document.querySelectorAll('.deleteBtn').forEach(b => b.classList.add('show'));
                     clearBtn.classList.add('show');
-                    alert('✅ 验证成功，已解锁管理功能');
-                    await loadMessages();
+                    loadMessages();
                 } else {
+                    isAdmin = false;
+                    localStorage.removeItem('adminPwd');
                     alert('❌ 密码错误');
                 }
             }
-        });
 
-        // ---------- 恢复会话 ----------
-        if (sessionStorage.getItem('admin_session') === 'true') {
-            isAdmin = true;
-            panelTitle.className = 'unlocked';
-            panelTitle.textContent = '💬 留言反馈';
-            // 删除按钮和清空按钮会在 loadMessages 时自动显示
-        }
+            // 删除留言
+            window.deleteMessage = async function(id) {
+                if (!isAdmin) { alert('请先验证管理密码'); return; }
+                if (!confirm('确定删除这条留言？')) return;
+                try {
+                    const { error } = await supabase
+                        .from('messages')
+                        .delete()
+                        .eq('id', id);
+                    if (!error) {
+                        await loadMessages();
+                    } else {
+                        alert('删除失败');
+                    }
+                } catch (e) {
+                    alert('网络错误');
+                }
+            };
 
-        // =================================================================
-        //  修改密码弹窗
-        // =================================================================
-
-        function openPwdModal() {
-            pwdModal.classList.add('active');
-            oldPwdInput.value = '';
-            newPwdInput.value = '';
-            confirmPwdInput.value = '';
-            oldPwdInput.focus();
-        }
-
-        function closePwdModal() {
-            pwdModal.classList.remove('active');
-        }
-
-        async function handleChangePwd() {
-            const oldPwd = oldPwdInput.value.trim();
-            const newPwd = newPwdInput.value.trim();
-            const confirmPwd = confirmPwdInput.value.trim();
-            if (!oldPwd || !newPwd || !confirmPwd) {
-                alert('请完整填写所有字段');
-                return;
+            // 清空全部
+            async function clearAll() {
+                if (!isAdmin) { alert('请先验证管理密码'); return; }
+                if (!confirm('确定清空全部留言？此操作不可恢复！')) return;
+                if (!confirm('再次确认：清空后无法恢复，确定吗？')) return;
+                try {
+                    const { error } = await supabase
+                        .from('messages')
+                        .delete()
+                        .neq('id', '00000000-0000-0000-0000-000000000000');
+                    if (!error) {
+                        await loadMessages();
+                    } else {
+                        alert('清空失败');
+                    }
+                } catch (e) {
+                    alert('清空失败');
+                }
             }
-            if (newPwd !== confirmPwd) {
-                alert('❌ 两次输入的新密码不一致');
-                return;
-            }
-            if (newPwd.length < 4) {
-                alert('❌ 新密码至少4位');
-                return;
-            }
-            const result = await changePassword(oldPwd, newPwd);
-            alert(result.msg);
-            if (result.success) {
-                closePwdModal();
-                // 清除管理会话，强制重新验证
-                sessionStorage.removeItem('admin_session');
-                isAdmin = false;
-                panelTitle.className = 'locked';
-                panelTitle.textContent = '💬 留言反馈';
-                document.querySelectorAll('.deleteBtn').forEach(b => b.classList.remove('show'));
-                clearBtn.classList.remove('show');
+
+            clearBtn.addEventListener('click', clearAll);
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.textContent = '🔄 刷新中...';
+                await checkServer();
                 await loadMessages();
-            }
-        }
-
-        changePwdBtn.addEventListener('click', openPwdModal);
-        pwdCancelBtn.addEventListener('click', closePwdModal);
-        pwdConfirmBtn.addEventListener('click', handleChangePwd);
-        pwdModal.addEventListener('click', (e) => {
-            if (e.target === pwdModal) closePwdModal();
-        });
-        document.querySelectorAll('#pwdModal input').forEach(inp => {
-            inp.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') handleChangePwd();
+                refreshBtn.textContent = '🔄 刷新';
             });
-        });
 
-        // =================================================================
-        //  事件绑定
-        // =================================================================
-
-        submitBtn.addEventListener('click', handleSubmit);
-        msgInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-            }
-        });
-
-        refreshBtn.addEventListener('click', async () => {
-            refreshBtn.textContent = '🔄 刷新中…';
+            await checkServer();
             await loadMessages();
-            refreshBtn.textContent = '🔄 刷新';
-        });
-
-        clearBtn.addEventListener('click', async () => {
-            if (!isAdmin) { alert('请先验证管理密码'); return; }
-            if (!confirm('确定清空全部留言？此操作不可恢复！')) return;
-            if (!confirm('再次确认：清空后无法恢复，确定吗？')) return;
-            await clearAllMessages();
-            await loadMessages();
-        });
-
-        // =================================================================
-        //  启动
-        // =================================================================
-
-        async function init() {
-            await initSupabase();
-            await loadMessages();
-
-            // 如果管理员会话有效，自动显示管理按钮
-            if (isAdmin) {
-                document.querySelectorAll('.deleteBtn').forEach(b => b.classList.add('show'));
-                clearBtn.classList.add('show');
-            }
         }
 
-        init();
-
-        // 暴露部分功能到控制台（方便调试）
-        window.debug = {
-            supabase,
-            useLocalMode,
-            isAdmin,
-            fetchMessages,
-            addMessage,
-            deleteMessageById,
-            clearAllMessages,
-            loadMessages,
-            verifyPassword,
-            changePassword
-        };
-
-        console.log(' 密码管理已启用 (SHA-256)');
-        console.log(' 使用「修改密码」按钮可更换密码');
-        console.log(' 密码哈希存储在 localStorage 中，键名: ' + STORAGE_KEY);
-        console.log(' 若 Supabase 不可用，自动切换至本地存储模式');
+        initApp();
     </script>
 </body>
 </html>
